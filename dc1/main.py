@@ -42,7 +42,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # the structure of your model (GPU acceleration hides them)!
     # Also make sure you set this to False again for actual model training
     # as training your model with GPU-acceleration (CUDA/MPS) is much faster.
-    DEBUG = False
+    DEBUG = True
 
     # Moving our model to the right device (CUDA will speed training up significantly!)
     if torch.cuda.is_available() and not DEBUG:
