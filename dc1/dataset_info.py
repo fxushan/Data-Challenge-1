@@ -3,6 +3,7 @@ import torch
 from dc1.image_dataset import ImageDataset
 from pathlib import Path
 from matplotlib import pyplot as plt
+import numpy as np
 #Images are 1024x1024 px originally
 #Scaled down to 128x128 px in our database to reduce size
 
@@ -14,12 +15,12 @@ print(train_dataset.targets[0])
 
 '''
 It is split between images and targets(labels), they are in cat codes, order is:
-1. Pneumothorax
-2. Nodule
-3. No Finding
-4. Infiltration
-5. Effusion
-6. Atelectasis
+0. Pneumothorax
+1. Nodule
+2. No Finding
+3. Infiltration
+4. Effusion
+5. Atelectasis
 '''
 
 torch = torch.from_numpy(train_dataset.imgs[1] / 255).float()
@@ -29,3 +30,5 @@ print(torch)
 image = torch.squeeze(0)
 plt.imshow(image.numpy(), cmap='gray', interpolation='nearest')
 plt.show()
+
+print(np.unique(train_dataset.targets))
