@@ -42,7 +42,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # the structure of your model (GPU acceleration hides them)!
     # Also make sure you set this to False again for actual model training
     # as training your model with GPU-acceleration (CUDA/MPS) is much faster.
-    DEBUG = True
+    DEBUG = False
 
     # Moving our model to the right device (CUDA will speed training up significantly!)
     if torch.cuda.is_available() and not DEBUG:
@@ -73,7 +73,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
     mean_losses_train: List[torch.Tensor] = []
     mean_losses_test: List[torch.Tensor] = []
-    
+
     for e in range(n_epochs):
         if activeloop:
 
@@ -107,18 +107,18 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # check if model_weights/ subdir exists
     if not Path("model_weights/").exists():
         os.mkdir(Path("model_weights/"))
-    
+
     # Saving the model
     torch.save(model.state_dict(), f"model_weights/model_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.txt")
-    
+
     # Create plot of losses
     figure(figsize=(9, 10), dpi=80)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-    
+
     ax1.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_train], label="Train", color="blue")
     ax2.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_test], label="Test", color="red")
     fig.legend()
-    
+
     # Check if /artifacts/ subdir exists
     if not Path("artifacts/").exists():
         os.mkdir(Path("artifacts/"))

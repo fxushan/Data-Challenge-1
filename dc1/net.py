@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class Net(nn.Module):
-    def __init__(self, n_classes: int) -> None:
+    def __init__(self, n_classes: int = 6) -> None:
         super(Net, self).__init__()
 
         self.cnn_layers = nn.Sequential(
