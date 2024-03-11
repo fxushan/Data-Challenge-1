@@ -7,19 +7,20 @@ from matplotlib import pyplot as plt
 #Scaled down to 128x128 px in our database to reduce size
 
 #Dataset itself is in Numpy arrays, which was originally Pytorch
+#Length of 16841
 train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
-
+print(len(train_dataset))
 print(train_dataset.imgs[1])
-print(train_dataset.targets[0])
+print(train_dataset.targets[1])
 
 '''
 It is split between images and targets(labels), they are in cat codes, order is:
-1. Pneumothorax
-2. Nodule
-3. No Finding
-4. Infiltration
-5. Effusion
-6. Atelectasis
+0. Pneumothorax
+1. Nodule
+2. No Finding
+3. Infiltration
+4. Effusion
+5. Atelectasis
 '''
 
 torch = torch.from_numpy(train_dataset.imgs[1] / 255).float()
