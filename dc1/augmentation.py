@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 X_train = np.load('../dc1/data/X_train.npy')
-Y_train = np.load('../dc1/data/X_train.npy')
+Y_train = np.load('../dc1/data/Y_train.npy')
 X_train = X_train.reshape(X_train.shape[0], 128, 128, 1)
 
 data_gen = ImageDataGenerator(
@@ -38,7 +38,7 @@ X_augmented = np.array(X_augmented)
 Y_augmented = np.array(Y_augmented)
 
 print('Convert done\n')
-print('Appending augmented data to original data\n')
+print('Appending augmented data to original data')
 # Append the augmented data to the original data
 X_train_augmented = np.concatenate((X_train, X_augmented), axis=0)
 Y_train_augmented = np.concatenate((Y_train, Y_augmented), axis=0)
