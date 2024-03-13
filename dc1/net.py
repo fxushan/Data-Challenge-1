@@ -27,12 +27,6 @@ class Net(nn.Module):
             nn.Linear(256, n_classes)
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.cnn_layers(x)
-        x = x.view(x.size(0), -1)
-        x = self.linear_layers(x)
-        return x
-
     # Defining the forward pass
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.cnn_layers(x)
