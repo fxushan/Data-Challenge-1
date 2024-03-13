@@ -3,6 +3,7 @@ import torch
 from dc1.image_dataset import ImageDataset
 from pathlib import Path
 from matplotlib import pyplot as plt
+import numpy as np
 #Images are 1024x1024 px originally
 #Scaled down to 128x128 px in our database to reduce size
 
@@ -22,6 +23,7 @@ It is split between images and targets(labels), they are in cat codes, order is:
 4. Effusion
 5. Atelectasis
 '''
+print(np.unique(train_dataset.targets))
 
 torch = torch.from_numpy(train_dataset.imgs[1] / 255).float()
 print(torch)

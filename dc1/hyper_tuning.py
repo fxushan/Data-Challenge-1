@@ -2,28 +2,21 @@
 from pathlib import Path
 
 # Other imports
-import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.pyplot as plt
+import numpy as np
+# Plot install
+import pandas as pd
 import plotext  # type: ignore
+import seaborn as sns
 # Torch imports
 import torch
-import torch.optim as optim
-from sklearn.model_selection import GridSearchCV
+from skopt import BayesSearchCV
 from skopt.space import Integer, Real
 from skorch import NeuralNetClassifier
 from torchsummary import summary  # type: ignore
 
 from dc1.image_dataset import ImageDataset
 from dc1.net import Net
-from skopt import BayesSearchCV
-# Plot install
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.metrics import mean_absolute_error
-from scipy.stats import randint, uniform
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 
 def parameter_over_iterations(model_result):
@@ -51,14 +44,16 @@ def parameter_over_iterations(model_result):
     sns.barplot(y=(mean_metric.values + abs(np.min(mean_metric.values))), x=np.arange(len(mean_metric)),
                 ax=axs.flatten()[i])
     axs.flatten()[i].set_title('overall metric')
+    plt.show()
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+# device = 'cpu'
 train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
 test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
 X_train = torch.from_numpy(train_dataset.imgs).float()
 y_train = torch.tensor(train_dataset.targets).long()
+
 # Load the Neural Net. NOTE: set number of distinct labels here
 model = NeuralNetClassifier(module=Net,
                             module__n_classes=6,
@@ -84,10 +79,17 @@ print(model.device)
 optimizer_kwargs = {'acq_func_kwargs': {"xi": 10, "kappa": 10}}
 space = {'batch_size': Integer(10, 100),
          'lr': Real(0.01, 0.55, "uniform"),
-         'max_epochs': (Integer(10, 100)),
-         'module__n_classes': Integer(3, 50)}
+         'max_epochs': (Integer(10, 100))}
 bsearch = BayesSearchCV(estimator=model,
-                        search_spaces=space, scoring='neg_mean_absolute_error', n_jobs=1, n_iter=64, cv=5,
+                        search_spaces=space, scoring='neg_mean_absolute_error', n_jobs=3, n_iter=42, cv=3,
                         optimizer_kwargs=optimizer_kwargs)
-bsearch.fit(X_train, y_train)
+bayes_result = bsearch.fit(X_train, y_train)
+print("Best: %f using %s" % (bayes_result.best_score_, bayes_result.best_params_))
+means = bayes_result.cv_results_['mean_test_score']
+stds = bayes_result.cv_results_['std_test_score']
+params = bayes_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+print(model.get_params())
+
 parameter_over_iterations(bsearch)
