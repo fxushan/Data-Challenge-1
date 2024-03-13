@@ -2,6 +2,7 @@ from typing import Callable, List, Any
 
 import torch
 from sklearn.metrics import cohen_kappa_score, confusion_matrix, matthews_corrcoef
+from pycm import ConfusionMatrix
 from tensorflow import Tensor
 from tqdm import tqdm
 
@@ -22,6 +23,8 @@ def train_model(
     kappas = []
     mcc_list = []
     conf_matrix_total = 0
+    cm_total = 0
+    batch_number = 0
     # Put the model in train mode:
     model.train()
     # Feed all the batches one by one:
@@ -67,10 +70,17 @@ def train_model(
 
         # Confusion Matrix
         labels = list(range(0, 6))
-        conf_matrix_batch = confusion_matrix(predictions_np, labels_np, labels=labels)
+        conf_matrix_batch = confusion_matrix(y_pred=predictions_np, y_true=labels_np, labels=labels)
         # print(conf_matrix_batch)
-
         conf_matrix_total = conf_matrix_batch + conf_matrix_total
+
+        # Confusion Matrix 2
+        if batch_number == 0:
+            cm_total = ConfusionMatrix(actual_vector=labels_np, predict_vector=predictions_np, classes=[0, 1, 2, 3, 4, 5])
+            batch_number += 1
+        elif batch_number != 0:
+            cm = ConfusionMatrix(actual_vector=labels_np, predict_vector=predictions_np, classes=[0, 1, 2, 3, 4, 5])
+            cm_total = cm_total.combine(cm)
 
         # We first need to make sure we reset our optimizer at the start.
         # We want to learn from each batch separately,
@@ -80,7 +90,7 @@ def train_model(
         loss.backward()
         # We then make the optimizer take a step in the right direction.
         optimizer.step()
-    return losses, kappas, mcc_list, conf_matrix_total
+    return losses, kappas, mcc_list, conf_matrix_total, cm_total
 
 
 def test_model(
@@ -95,6 +105,8 @@ def test_model(
     kappas = []
     mcc_list = []
     conf_matrix_total = 0
+    cm_total = 0
+    batch_number = 0
     # We need to make sure we do not update our model based on the test data:
     with torch.no_grad():
         for (x, y) in tqdm(test_sampler):
@@ -123,6 +135,15 @@ def test_model(
 
             # Confusion matrix
             labels = list(range(0, 6))
-            conf_matrix_batch = confusion_matrix(predictions_np, labels_np, labels=labels)
+            conf_matrix_batch = confusion_matrix(y_pred=predictions_np, y_true=labels_np, labels=labels)
             conf_matrix_total = conf_matrix_batch + conf_matrix_total
-    return losses, kappas, mcc_list, conf_matrix_total
+
+            # Confusion Matrix 2
+            if batch_number == 0:
+                cm_total = ConfusionMatrix(actual_vector=labels_np, predict_vector=predictions_np,
+                                           classes=[0, 1, 2, 3, 4, 5])
+                batch_number += 1
+            elif batch_number != 0:
+                cm = ConfusionMatrix(actual_vector=labels_np, predict_vector=predictions_np, classes=[0, 1, 2, 3, 4, 5])
+                cm_total = cm_total.combine(cm)
+    return losses, kappas, mcc_list, conf_matrix_total, cm_total

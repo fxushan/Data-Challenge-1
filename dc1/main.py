@@ -15,6 +15,7 @@ import torch.nn as nn
 import torch.optim as optim
 from matplotlib.pyplot import figure
 from torchsummary import summary  # type: ignore
+import numpy as np
 
 from dc1.batch_sampler import BatchSampler
 from dc1.image_dataset import ImageDataset
@@ -82,7 +83,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     for e in range(n_epochs):
         if activeloop:
             # Training:
-            losses, kappas, mcc_list, conf_matrix_total_train = train_model(model, train_sampler, optimizer,
+            losses, kappas, mcc_list, conf_matrix_total_train, cm_total = train_model(model, train_sampler, optimizer,
                                                                             loss_function, device)
 
             # Calculating and printing statistics:
@@ -107,15 +108,15 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             print(f"\nEpoch {e + 1} training done, average MCC train set: {mean_mcc}\n")
 
             #     # Cohen's kappa over final confusion matrix
-            # Po = sum(conf_matrix_total[i][i] for i in range(6)) / np.sum(conf_matrix_total)
-            # row_sums = [sum(row) for row in conf_matrix_total]
-            # col_sums = [sum(col) for col in zip(*conf_matrix_total)]
-            # Pe = sum((row_sums[i] * col_sums[i]) for i in range(6)) / (np.sum(conf_matrix_total) ** 2)
-            # kappa_conf_matrix = (Po - Pe) / (1 - Pe)
-            # print(f"\nEpoch {e + 1} training done, kappa over confusion matrix in train set: {kappa_conf_matrix}\n")
+            # Po = sum(conf_matrix_total_train[i][i] for i in range(6)) / np.sum(conf_matrix_total_train)
+            # row_sums = [sum(row) for row in conf_matrix_total_train]
+            # col_sums = [sum(col) for col in zip(*conf_matrix_total_train)]
+            # Pe = sum((row_sums[i] * col_sums[i]) for i in range(6)) / (np.sum(conf_matrix_total_train) ** 2)
+            # kappa_conf_matrix_train = (Po - Pe) / (1 - Pe)
+            # print(f"\nEpoch {e + 1} training done, kappa over confusion matrix in train set: {kappa_conf_matrix_train}\n")
 
             # Testing:
-            losses, kappas, mcc_list, conf_matrix_total_test = test_model(model, test_sampler, loss_function, device)
+            losses, kappas, mcc_list, conf_matrix_total_test, cm_total = test_model(model, test_sampler, loss_function, device)
 
             # Calculating and printing statistics:
             # Cross entropy loss
@@ -138,15 +139,15 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             mean_mcc_test.append(mean_mcc)
             print(f"\nEpoch {e + 1} training done, average MCC test set: {mean_mcc}\n")
 
-            # Plotting during training
-            plotext.clf()
-            plotext.scatter(mean_losses_train, label="train")
-            plotext.scatter(mean_losses_test, label="test")
-            plotext.title("Train and test loss")
-
-            plotext.xticks([i for i in range(len(mean_losses_train) + 1)])
-
-            plotext.show()
+            # # Plotting during training
+            # plotext.clf()
+            # plotext.scatter(mean_losses_train, label="train")
+            # plotext.scatter(mean_losses_test, label="test")
+            # plotext.title("Train and test loss")
+            #
+            # plotext.xticks([i for i in range(len(mean_losses_train) + 1)])
+            #
+            # plotext.show()
 
     # retrieve current time to label artifacts
     now = datetime.now()
@@ -157,7 +158,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Saving the model
     torch.save(model.state_dict(), f"model_weights/model_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.txt")
 
-    # Create plot of losses
+    # Create plot of Cross Entropy losses
     figure(figsize=(9, 16), dpi=80)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
 
@@ -171,7 +172,29 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
         os.mkdir(Path("artifacts/"))
 
     # save plot of losses
-    fig.savefig(Path("artifacts") / f"CrossEntropy_session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.png")
+    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CrossEntropy.png")
+
+    # Create plot of Cohen's Kappas
+    figure(figsize=(9, 10), dpi=80)
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+
+    ax1.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_train], label="Train", color="blue")
+    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_test], label="Test", color="red")
+    fig.legend()
+    fig.suptitle("Cohen's Kappa over epochs")
+
+    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CohensKappa.png")
+
+    # Create plot of Matthews correlation coefficients
+    figure(figsize=(9, 10), dpi=80)
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+
+    ax1.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_train], label="Train", color="blue")
+    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_test], label="Test", color="red")
+    fig.legend()
+    fig.suptitle('Matthews Correlation Coefficient over epochs')
+
+    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_MCC.png")
 
     # Create plot of heatmaps of final confusion matrix
     fig, axs = plt.subplots(2, figsize=(10, 10))
@@ -187,30 +210,17 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     axs[1].set_title('Final heatmap for test data')
 
     fig.savefig(
-        Path("artifacts") / f"ConfusionMatrix_session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.png")
+        Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_ConfusionMatrix.png")
 
-    # Create plot of Cohen's Kappas
-    figure(figsize=(9, 10), dpi=80)
-    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+    # Save text file with confusion matrix (PyCM library) and all their metrics
+    with open(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_PyCM.txt", "a") as f:
+        # Printing CM and metrics gives None, so I manually copy it over
+        print(f'{cm_total.print_matrix()}', file=f)
+        print(f'{cm_total.stat(summary=True)}', file=f)
 
-    ax1.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_train], label="Train", color="blue")
-    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_test], label="Test", color="red")
-    fig.legend()
-    fig.suptitle("Cohen's Kappa over epochs")
-
-    fig.savefig(Path("artifacts") / f"CohenKappa_session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.png")
-
-    # Create plot of Matthews correlation coefficients
-    figure(figsize=(9, 10), dpi=80)
-    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-
-    ax1.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_train], label="Train", color="blue")
-    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_test], label="Test", color="red")
-    fig.legend()
-    fig.suptitle('Matthews Correlation Coefficient over epochs')
-
-    fig.savefig(Path("artifacts") / f"MCC_session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.png")
-
+        print(f'Imbalanced dataset?: {cm_total.imbalance}', file=f)
+        print(f'Binary classification?: {cm_total.binary}', file=f)
+        print(f'Recommended metrics: {cm_total.recommended_list}', file=f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
