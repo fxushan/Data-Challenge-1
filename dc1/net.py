@@ -5,28 +5,23 @@ import torch.nn as nn
 class Net(nn.Module):
     def __init__(self, n_classes: int = 6) -> None:
         super(Net, self).__init__()
-
         self.cnn_layers = nn.Sequential(
-            # Defining a 2D convolution layer
             nn.Conv2d(1, 64, kernel_size=4, stride=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(negative_slope=0.01),
             nn.MaxPool2d(kernel_size=4),
-            torch.nn.Dropout(p=0.5, inplace=True),
-            # Defining another 2D convolution layer
+            nn.Dropout(p=0.5),
             nn.Conv2d(64, 32, kernel_size=4, stride=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(negative_slope=0.01),
             nn.MaxPool2d(kernel_size=3),
-            torch.nn.Dropout(p=0.25, inplace=True),
-            # Defining another 2D convolution layer
+            nn.Dropout(p=0.25),
             nn.Conv2d(32, 16, kernel_size=4, stride=1),
             nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(negative_slope=0.01),
             nn.MaxPool2d(kernel_size=2),
-            torch.nn.Dropout(p=0.125, inplace=True),
+            nn.Dropout(p=0.125),
         )
-
         self.linear_layers = nn.Sequential(
             nn.Linear(144, 256),
             nn.Linear(256, n_classes)

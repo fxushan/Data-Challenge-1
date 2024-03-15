@@ -32,3 +32,5 @@ print(torch)
 image = torch.squeeze(0)
 plt.imshow(image.numpy(), cmap='gray', interpolation='nearest')
 plt.show()
+
+print(np.unique(train_dataset.targets))
