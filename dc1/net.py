@@ -34,9 +34,15 @@ class Net(nn.Module):
 
     # Defining the forward pass
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.shape[1] == 1:
+            x = x
+        elif x.shape[-1] == 1:
+            x = x.permute(0, 3, 1, 2)
+
         x = self.cnn_layers(x)
         # After our convolutional layers which are 2D, we need to flatten our
         # input to be 1 dimensional, as the linear layers require this.
-        x = x.view(x.size(0), -1)
+        x = x.reshape(x.size(0), -1)
+
         x = self.linear_layers(x)
         return x

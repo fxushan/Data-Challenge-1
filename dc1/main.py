@@ -25,7 +25,7 @@ from dc1.train_test import train_model, test_model
 
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Load the train and test data set
-    train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
+    train_dataset = ImageDataset(Path("data/X_trythis.npy"), Path("data/Y_trythis.npy"))
     test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
 
     # Load the Neural Net. NOTE: set number of distinct labels here
@@ -131,13 +131,13 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             # Average kappa over all batches
             mean_kappa = sum(kappas) / len(kappas)
             mean_kappas_test.append(mean_kappa)
-            print(f"\nEpoch {e + 1} training done, average Cohen's kappa test set: {mean_kappa}\n")
+            print(f"\nEpoch {e + 1} testing done, average Cohen's kappa test set: {mean_kappa}\n")
 
             # Matthew's correlation coefficient
             # Average MCC over all batches
             mean_mcc = sum(mcc_list) / len(mcc_list)
             mean_mcc_test.append(mean_mcc)
-            print(f"\nEpoch {e + 1} training done, average MCC test set: {mean_mcc}\n")
+            print(f"\nEpoch {e + 1} testing done, average MCC test set: {mean_mcc}\n")
 
             # # Plotting during training
             # plotext.clf()
