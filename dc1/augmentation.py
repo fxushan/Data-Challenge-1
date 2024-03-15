@@ -18,24 +18,14 @@ data_gen = ImageDataGenerator(
 
 augmented_images = data_gen.flow(X_train, Y_train, batch_size=1)
 
-num_augmented_per_original = 5  # Number of augmented images to generate per original image
-X_augmented = []  # To store augmented images
-Y_augmented = []  # To store corresponding labels
+for numb in range(5):
+    X_augmented = np.empty_like(X_train)
+    Y_augmented = np.empty_like(Y_train)
 
-for x, y in zip(X_train, Y_train):
-    for _ in range(num_augmented_per_original):
-        img = next(augmented_images)[0]
-        img_squeezed = np.squeeze(img, axis=0)  # Remove the batch dimension
-        X_augmented.append(img_squeezed)  # Append the image without the batch dimension
-        Y_augmented.append(y)  # Same label as the original image
+    for i in range(X_train.shape[0]):
+        augmented_image, label = next(augmented_images)
+        X_augmented[i] = augmented_image
+        Y_augmented[i] = label
 
-# Convert lists to numpy arrays
-X_augmented = np.array(X_augmented)
-Y_augmented = np.array(Y_augmented)
-
-# Append the augmented data to the original data
-X_train_augmented = np.concatenate((X_train, X_augmented), axis=0)
-Y_train_augmented = np.concatenate((Y_train, Y_augmented), axis=0)
-
-np.save('D:/DC1/DataChallenge1/dc1/data/X_train_augmented.npy', X_train_augmented)
-np.save('D:/DC1/DataChallenge1/dc1/data/Y_train_augmented.npy', Y_train_augmented)
+    np.save('D:/DC1/DataChallenge1/dc1/data/X_aug{}.npy'.format(numb), X_augmented)
+    np.save('D:/DC1/DataChallenge1/dc1/data/Y_aug{}.npy'.format(numb), Y_augmented)
