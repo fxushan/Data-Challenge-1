@@ -17,21 +17,33 @@ data_gen = ImageDataGenerator(
     vertical_flip=True,
 )
 
-for numb in range(5):
-    augmented_images = data_gen.flow(X_train, Y_train, batch_size=1, seed=numb)
+augmented_images = data_gen.flow(X_train, Y_train, batch_size=1)
 
-    # Initialize arrays to store augmented images and their labels
-    X_augmented = np.empty_like(X_train)
-    Y_augmented = np.empty_like(Y_train)
+num_augmented_per_original = 5  # Number of augmented images to generate per original image
+X_augmented = []  # To store augmented images
+Y_augmented = []  # To store corresponding labels
 
-    print(f'Loop {numb}/4')
-    print(f'Amount of elements: {len(X_train)}')
-    for i in tqdm(range(X_train.shape[0])):
-        augmented_image, label = next(augmented_images)
-        X_augmented[i] = augmented_image
-        Y_augmented[i] = label
-    print(f'Loop {numb}/4 done')
+print(f'Amount of elements to loop over: {len(list(zip(X_train, Y_train)))}')
+for x, y in tqdm(zip(X_train, Y_train)):
+    for _ in range(num_augmented_per_original):
+        img = next(augmented_images)[0]
+        img_squeezed = np.squeeze(img, axis=0)  # Remove the batch dimension
+        X_augmented.append(img_squeezed)  # Append the image without the batch dimension
+        Y_augmented.append(y)  # Same label as the original image
 
-    print('Saving files...\n')
-    np.save('../dc1/data/X_aug{}.npy'.format(numb), X_augmented)
-    np.save('../dc1/data/Y_aug{}.npy'.format(numb), Y_augmented)
+print('Loop done\n')
+print('Converting lists to numpy arrays')
+# Convert lists to numpy arrays
+X_augmented = np.array(X_augmented)
+Y_augmented = np.array(Y_augmented)
+
+print('Convert done\n')
+print('Appending augmented data to original data')
+# Append the augmented data to the original data
+X_train_augmented = np.concatenate((X_train, X_augmented), axis=0)
+Y_train_augmented = np.concatenate((Y_train, Y_augmented), axis=0)
+
+print('Append done\n')
+print('Saving files')
+np.save('../dc1/data/X_train_augmented.npy', X_train_augmented)
+np.save('../dc1/data/Y_train_augmented.npy', Y_train_augmented)
