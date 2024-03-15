@@ -17,6 +17,7 @@ from torchsummary import summary  # type: ignore
 
 from dc1.image_dataset import ImageDataset
 from dc1.net import Net
+import random
 
 
 def parameter_over_iterations(model_result):
@@ -54,6 +55,12 @@ test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
 X_train = torch.from_numpy(train_dataset.imgs).float()
 y_train = torch.tensor(train_dataset.targets).long()
 
+random.seed(42)
+X_sample, y_sample = zip(*random.sample(list(zip(X_train, y_train)), 2000))
+X_sample = np.asarray(X_sample)
+y_sample = np.asarray(y_sample)
+# print(X_sample, y_sample)
+
 # Load the Neural Net. NOTE: set number of distinct labels here
 model = NeuralNetClassifier(module=Net,
                             module__n_classes=6,
@@ -78,12 +85,15 @@ print(model.device)
 # print(model.get_params())
 optimizer_kwargs = {'acq_func_kwargs': {"xi": 10, "kappa": 10}}
 space = {'batch_size': Integer(10, 100),
-         'lr': Real(0.01, 0.55, "uniform"),
+         # 'lr': Real(0.01, 0.55, "uniform"),
          'max_epochs': (Integer(10, 100))}
+# space = {'module__slope_1': Real(0.001, 1),
+#          'module__slope_2': Real(0.001, 1),
+#          'module__slope_3': Real(0.001, 1)}
 bsearch = BayesSearchCV(estimator=model,
-                        search_spaces=space, scoring='neg_mean_absolute_error', n_jobs=3, n_iter=42, cv=3,
+                        search_spaces=space, scoring='neg_mean_absolute_error', n_jobs=2, n_iter=42, cv=3,
                         optimizer_kwargs=optimizer_kwargs)
-bayes_result = bsearch.fit(X_train, y_train)
+bayes_result = bsearch.fit(X_sample, y_sample)
 print("Best: %f using %s" % (bayes_result.best_score_, bayes_result.best_params_))
 means = bayes_result.cv_results_['mean_test_score']
 stds = bayes_result.cv_results_['std_test_score']
