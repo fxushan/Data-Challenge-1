@@ -16,7 +16,7 @@ def train_model(
         optimizer: torch.optim.Optimizer,
         loss_function: Callable[..., torch.Tensor],
         device: str,
-) -> tuple[List[Tensor], List[float], List[float], int | Any]:
+) -> tuple[List[Tensor], List[float], List[float], int | Any, int | ConfusionMatrix | Any]:
     #
     # Let us keep track of all the losses:
     losses = []
@@ -40,9 +40,6 @@ def train_model(
         probabilities = torch.nn.functional.softmax(predictions, dim=1)
         _, predicted_classes = torch.max(probabilities, dim=1)
 
-        # Accuracy metric
-        accuracy = (predicted_classes == y).float().mean()
-
         # Cross entropy
         loss = loss_function(predictions, y)
         losses.append(loss)
@@ -63,7 +60,6 @@ def train_model(
         # print(predicted_classes)
         # print(y)
         #
-        # print(f'Accuracy: {accuracy}')
         # print(f'Cross entropy: {loss}')
         # print(f"Cohen's Kappa: {kappa}")
         # print(f"MCC: {mcc}")
@@ -98,7 +94,7 @@ def test_model(
         test_sampler: BatchSampler,
         loss_function: Callable[..., torch.Tensor],
         device: str,
-) -> tuple[List[Tensor], List[float], List[float], int | Any]:
+) -> tuple[List[Tensor], List[float], List[float], int | Any, int | ConfusionMatrix | Any]:
     # Setting the model to evaluation mode:
     model.eval()
     losses = []

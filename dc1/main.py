@@ -25,7 +25,7 @@ from dc1.train_test import train_model, test_model
 
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Load the train and test data set
-    train_dataset = ImageDataset(Path("data/X_trythis.npy"), Path("data/Y_trythis.npy"))
+    train_dataset = ImageDataset(Path("data/X_lasttry.npy"), Path("data/Y_lasttry.npy"))
     test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
 
     # Load the Neural Net. NOTE: set number of distinct labels here
@@ -99,21 +99,13 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             # Average kappa over all batches
             mean_kappa = sum(kappas) / len(kappas)
             mean_kappas_train.append(mean_kappa)
-            print(f"\nEpoch {e + 1} training done, average Cohen's kappa train set: {mean_kappa}\n")
+            print(f"\nEpoch {e + 1} training done, average Cohen's kappa train set: {mean_kappa}")
 
             # Matthew's correlation coefficient
             # Average MCC over all batches
             mean_mcc = sum(mcc_list) / len(mcc_list)
             mean_mcc_train.append(mean_mcc)
-            print(f"\nEpoch {e + 1} training done, average MCC train set: {mean_mcc}\n")
-
-            #     # Cohen's kappa over final confusion matrix
-            # Po = sum(conf_matrix_total_train[i][i] for i in range(6)) / np.sum(conf_matrix_total_train)
-            # row_sums = [sum(row) for row in conf_matrix_total_train]
-            # col_sums = [sum(col) for col in zip(*conf_matrix_total_train)]
-            # Pe = sum((row_sums[i] * col_sums[i]) for i in range(6)) / (np.sum(conf_matrix_total_train) ** 2)
-            # kappa_conf_matrix_train = (Po - Pe) / (1 - Pe)
-            # print(f"\nEpoch {e + 1} training done, kappa over confusion matrix in train set: {kappa_conf_matrix_train}\n")
+            print(f"Epoch {e + 1} training done, average MCC train set: {mean_mcc}\n")
 
             # Testing:
             losses, kappas, mcc_list, conf_matrix_total_test, cm_total = test_model(model, test_sampler, loss_function, device)
@@ -131,13 +123,13 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             # Average kappa over all batches
             mean_kappa = sum(kappas) / len(kappas)
             mean_kappas_test.append(mean_kappa)
-            print(f"\nEpoch {e + 1} testing done, average Cohen's kappa test set: {mean_kappa}\n")
+            print(f"\nEpoch {e + 1} testing done, average Cohen's kappa test set: {mean_kappa}")
 
             # Matthew's correlation coefficient
             # Average MCC over all batches
             mean_mcc = sum(mcc_list) / len(mcc_list)
             mean_mcc_test.append(mean_mcc)
-            print(f"\nEpoch {e + 1} testing done, average MCC test set: {mean_mcc}\n")
+            print(f"Epoch {e + 1} testing done, average MCC test set: {mean_mcc}\n")
 
             # # Plotting during training
             # plotext.clf()
