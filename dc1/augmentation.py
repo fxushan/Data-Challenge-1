@@ -17,7 +17,7 @@ data_gen = ImageDataGenerator(
     vertical_flip=True,
 )
 
-augmented_images = data_gen.flow(X_train, Y_train, batch_size=1)
+augmented_images = data_gen.flow(X_train, Y_train, batch_size=1, seed=777)
 
 num_augmented_per_original = 5  # Number of augmented images to generate per original image
 X_augmented = []  # To store augmented images
