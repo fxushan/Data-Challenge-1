@@ -84,12 +84,15 @@ print(model.device)
 #     print("%f (%f) with: %r" % (mean, stdev, param))
 # print(model.get_params())
 optimizer_kwargs = {'acq_func_kwargs': {"xi": 10, "kappa": 10}}
-space = {'batch_size': Integer(10, 100),
-         # 'lr': Real(0.01, 0.55, "uniform"),
-         'max_epochs': (Integer(10, 100))}
+# space = {'batch_size': Integer(10, 100),
+#          # 'lr': Real(0.01, 0.55, "uniform"),
+#          'max_epochs': (Integer(10, 100))}
 # space = {'module__slope_1': Real(0.001, 1),
 #          'module__slope_2': Real(0.001, 1),
 #          'module__slope_3': Real(0.001, 1)}
+space = {'module__alpha_1': Real(0.01, 2),
+         'module__alpha_2': Real(0.01, 2),
+         'module__alpha_3': Real(0.01, 2)}
 bsearch = BayesSearchCV(estimator=model,
                         search_spaces=space, scoring='neg_mean_absolute_error', n_jobs=2, n_iter=42, cv=3,
                         optimizer_kwargs=optimizer_kwargs)
