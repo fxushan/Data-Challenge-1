@@ -1,14 +1,20 @@
 # Custom imports
+from torch.utils.data import DataLoader
+
 from dc1.batch_sampler import BatchSampler
 from dc1.image_dataset import ImageDataset
 from dc1.net import Net
 from dc1.train_test import train_model, test_model
 
+
 # Torch imports
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torchsummary import summary  # type: ignore
+import torchvision.models as models
+
 
 # Other imports
 import matplotlib.pyplot as plt  # type: ignore
@@ -21,14 +27,51 @@ from pathlib import Path
 from typing import List
 
 
+class SelfAttention(nn.Module):
+    def __init__(self, in_channels):
+        super(SelfAttention, self).__init__()
+        self.query = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
+        self.key = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
+        self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1)
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        # Calculate query, key, and value
+        query = self.query(x)
+        key = self.key(x)
+        value = self.value(x)
+
+        # Reshape query, key, and value
+        query = query.view(query.size(0), -1, query.size(2) * query.size(3))
+        key = key.view(key.size(0), -1, key.size(2) * key.size(3))
+        value = value.view(value.size(0), -1, value.size(2) * value.size(3))
+
+        # Calculate attention scores
+        attention = torch.bmm(query.permute(0, 2, 1), key)
+        attention = self.softmax(attention)
+
+        # Apply attention to value
+        attended_value = torch.bmm(value, attention)
+
+        # Reshape attended value
+        attended_value = attended_value.view(attended_value.size(0), -1, x.size(2), x.size(3))
+
+        return attended_value
+
+
+
+
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
     # Load the train and test data set
     train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
     test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
 
-    # Load the Neural Net. NOTE: set number of distinct labels here
+    # Load the Neural Net with attention
     model = Net(n_classes=6)
+
+    # Load the Neural Net. NOTE: set number of distinct labels here
+    #odel = Net(n_classes=6)
 
     # Initialize optimizer(s) and loss function(s)
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.1)
@@ -126,12 +169,39 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # save plot of losses
     fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.png")
 
+    # Select a small subset of test data for visualization
+    test_data_loader = DataLoader(test_dataset, batch_size=5, shuffle=True)
+    test_sampler = BatchSampler(
+        batch_size=100, dataset=test_dataset, balanced=args.balanced_batches
+    )
+    test_examples, test_labels = next(iter(test_sampler))
+
+    # Move the examples to the same device as the model
+    test_examples = test_examples.to(device)
+
+    # Make predictions with the model to compute attention weights
+    model.eval()  # Set the model to evaluation mode
+    with torch.no_grad():
+        _ = model(test_examples)
+
+    # Access the attention weights
+    attention_weights = model.last_attention_weights.detach().cpu().numpy()
+
+    # Visualization of attention weights for each example in the batch
+    for idx, weights in enumerate(attention_weights):
+        plt.figure(figsize=(10, 2))
+        plt.plot(weights[0], marker='o')  # Plot the attention weights for the example
+        plt.title(f'Attention Weights for Example {idx + 1}')
+        plt.xlabel('Feature Index')
+        plt.ylabel('Attention Weight')
+        plt.show()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--nb_epochs", help="number of training iterations", default=10, type=int
+        "--nb_epochs", help="number of training iterations", default=3, type=int
     )
     parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
     parser.add_argument(
