@@ -16,9 +16,10 @@ data_gen = ImageDataGenerator(
     vertical_flip=True,
 )
 
-augmented_images = data_gen.flow(X_train, Y_train, batch_size=1)
-
 for numb in range(5):
+    augmented_images = data_gen.flow(X_train, Y_train, batch_size=1, seed=numb)
+
+    # Initialize arrays to store augmented images and their labels
     X_augmented = np.empty_like(X_train)
     Y_augmented = np.empty_like(Y_train)
 
