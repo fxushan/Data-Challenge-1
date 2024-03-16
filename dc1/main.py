@@ -42,7 +42,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # the structure of your model (GPU acceleration hides them)!
     # Also make sure you set this to False again for actual model training
     # as training your model with GPU-acceleration (CUDA/MPS) is much faster.
-    DEBUG = True
+    DEBUG = False
 
     # Moving our model to the right device (CUDA will speed training up significantly!)
     if torch.cuda.is_available() and not DEBUG:
@@ -85,8 +85,8 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             print(f"\nEpoch {e + 1} training done, loss on train set: {mean_loss}\n")
 
             # Testing:
-            losses = test_model(model, test_sampler, loss_function, device)
-
+            losses, visualization = test_model(model, test_sampler, loss_function, device)
+            print(visualization)
             # # Calculating and printing statistics:
             mean_loss = sum(losses) / len(losses)
             mean_losses_test.append(mean_loss)
@@ -101,6 +101,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             plotext.xticks([i for i in range(len(mean_losses_train) + 1)])
 
             plotext.show()
+
 
     # retrieve current time to label artifacts
     now = datetime.now()
