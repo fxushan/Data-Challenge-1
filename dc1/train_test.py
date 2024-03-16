@@ -1,8 +1,13 @@
+from numpy import ndarray
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from torch import Tensor
 from tqdm import tqdm
 import torch
 from dc1.net import Net
 from dc1.batch_sampler import BatchSampler
-from typing import Callable, List
+from typing import Callable, List, Tuple
 
 
 def train_model(
@@ -42,7 +47,7 @@ def test_model(
         test_sampler: BatchSampler,
         loss_function: Callable[..., torch.Tensor],
         device: str,
-) -> List[torch.Tensor]:
+) -> tuple[list[Tensor], ndarray]:
     # Setting the model to evaluation mode:
     model.eval()
     losses = []
@@ -50,9 +55,17 @@ def test_model(
     with torch.no_grad():
         for (x, y) in tqdm(test_sampler):
             # Making sure our samples are stored on the same device as our model:
+            z = torch.tensor(x, requires_grad=True)
+            z = z.to(device)
             x = x.to(device)
             y = y.to(device)
             prediction = model.forward(x)
             loss = loss_function(prediction, y)
             losses.append(loss)
-    return losses
+            target_layers = [model.cnn_layers[-1]]
+            cam = GradCAM(model, target_layers)
+            grayscale_cam = cam(input_tensor=z)
+            # In this example grayscale_cam has only one image in the batch:
+            grayscale_cam = grayscale_cam[0, :]
+            visualization = show_cam_on_image(z, grayscale_cam, use_rgb=False)
+    return losses, visualization
