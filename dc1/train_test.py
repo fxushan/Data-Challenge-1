@@ -11,6 +11,7 @@ from typing import Callable, List, Tuple
 from torchvision import transforms
 import numpy as np
 from skimage.transform import resize
+import cv2
 
 
 
@@ -46,6 +47,21 @@ def train_model(
     return losses
 
 
+def visualize_batch(batch_tensor):
+    batch_size = batch_tensor.size(0)
+    images = []
+    colored_images = []
+    for i in range(batch_size):
+        image_tensor = batch_tensor[i]
+        # Assuming image_tensor is normalized (e.g., values between 0 and 1)
+        image_array = (image_tensor.squeeze().cpu().numpy() * 255).astype('uint8')
+        images.append(image_array)
+    print(images)
+    for image_array in images:
+        color_mapped_image = cv2.applyColorMap(image_array, cv2.COLORMAP_JET)
+        colored_images.append(color_mapped_image)
+    return colored_images
+
 def test_model(
         model: Net,
         test_sampler: BatchSampler,
@@ -65,13 +81,13 @@ def test_model(
         losses.append(loss)
 
         # Convert tensor to ndarray
-        z = x.detach().cpu().numpy()
-
+        z = x.detach().cpu()
+        images = visualize_batch(z)
         target_layers = [model.cnn_layers[-1]]
         cam = GradCAM(model, target_layers)
         grayscale_cam = cam(input_tensor=x)
         # In this example grayscale_cam has only one image in the batch:
-        grayscale_cam = grayscale_cam[0, :]
-        visualization = show_cam_on_image(z, grayscale_cam, use_rgb=False)
+        # grayscale_cam = grayscale_cam[0, :]
+        visualization = show_cam_on_image(images, grayscale_cam, use_rgb=False)
 
     return losses, visualization
