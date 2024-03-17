@@ -86,6 +86,8 @@ def test_model(
         target_layers = [model.cnn_layers[-1]]
         cam = GradCAM(model, target_layers)
         grayscale_cam = cam(input_tensor=x)
+        grayscale_cam = np.mean(grayscale_cam, axis=1).squeeze()
+
         # In this example grayscale_cam has only one image in the batch:
         # grayscale_cam = grayscale_cam[0, :]
         visualization = show_cam_on_image(images, grayscale_cam, use_rgb=False)
