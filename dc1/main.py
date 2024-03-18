@@ -1,28 +1,30 @@
 # Custom imports
+import argparse
+import os
+from datetime import datetime
+from pathlib import Path
+from typing import List
+
+# Other imports
+import matplotlib.pyplot as plt  # type: ignore
+from matplotlib.pyplot import figure
+import plotext  # type: ignore
+from sklearn.metrics import confusion_matrix, recall_score, precision_score, fbeta_score, roc_auc_score
+from sklearn.preprocessing import label_binarize
+import seaborn as sns
+# Torch imports
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from matplotlib.pyplot import figure
+from torchsummary import summary  # type: ignore
+import numpy as np
+
 from dc1.batch_sampler import BatchSampler
 from dc1.image_dataset import ImageDataset
 from dc1.net import Net
 from dc1.train_test import train_model, test_model
 
-# Torch imports
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchsummary import summary  # type: ignore
-
-# Other imports
-import matplotlib.pyplot as plt  # type: ignore
-from matplotlib.pyplot import figure
-import os
-import argparse
-import plotext  # type: ignore
-from datetime import datetime
-from pathlib import Path
-from sklearn.metrics import confusion_matrix, recall_score, precision_score, fbeta_score, roc_auc_score
-from sklearn.preprocessing import label_binarize
-import numpy as np
-from typing import List
-import seaborn as sns
 
 def load_data():
     train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
@@ -82,7 +84,6 @@ def calculate_additional_metrics(y_true, y_pred):
     print(f"F2 Score: {f2_score:.4f}")
 
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
-
     # Load the train and test data set
     #train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
     #test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
@@ -109,12 +110,13 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     if torch.cuda.is_available() and not DEBUG:
         print("@@@ CUDA device found, enabling CUDA training...")
         device = "cuda"
+        # device = physical_devices[0]
         model.to(device)
         # Creating a summary of our model and its layers:
         summary(model, (1, 128, 128), device=device)
     elif (
-        torch.backends.mps.is_available() and not DEBUG
-    ):  # PyTorch supports Apple Silicon GPU's from version 1.12
+            torch.backends.mps.is_available() and not DEBUG
+    ):  # PyTorch supports Apple Silicon GPUs from version 1.12
         print("@@@ Apple silicon device enabled, training with Metal backend...")
         device = "mps"
         model.to(device)
@@ -124,7 +126,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
         # Creating a summary of our model and its layers:
         summary(model, (1, 128, 128), device=device)
 
-    # Lets now train and test our model for multiple epochs:
+    # Let us now train and test our model for multiple epochs:
     train_sampler = BatchSampler(
         batch_size=batch_size, dataset=train_dataset, balanced=args.balanced_batches
     )
@@ -134,34 +136,71 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
     mean_losses_train: List[torch.Tensor] = []
     mean_losses_test: List[torch.Tensor] = []
+    mean_kappas_train = []
+    mean_kappas_test = []
+    mean_mcc_train = []
+    mean_mcc_test = []
 
     for e in range(n_epochs):
         if activeloop:
-
             # Training:
-            losses = train_model(model, train_sampler, optimizer, loss_function, device)
+            losses, kappas, mcc_list, conf_matrix_total_train, cm_total = train_model(model, train_sampler, optimizer,
+                                                                            loss_function, device)
+
             # Calculating and printing statistics:
+            # Cross entropy loss
             mean_loss = sum(losses) / len(losses)
             mean_losses_train.append(mean_loss)
             print(f"\nEpoch {e + 1} training done, loss on train set: {mean_loss}\n")
 
-            # Testing:
-            losses = test_model(model, test_sampler, loss_function, device)
+            # Confusion matrix
+            print(conf_matrix_total_train)
 
-            # # Calculating and printing statistics:
+            # Cohen's Kappa
+            # Average kappa over all batches
+            mean_kappa = sum(kappas) / len(kappas)
+            mean_kappas_train.append(mean_kappa)
+            print(f"\nEpoch {e + 1} training done, average Cohen's kappa train set: {mean_kappa}")
+
+            # Matthew's correlation coefficient
+            # Average MCC over all batches
+            mean_mcc = sum(mcc_list) / len(mcc_list)
+            mean_mcc_train.append(mean_mcc)
+            print(f"Epoch {e + 1} training done, average MCC train set: {mean_mcc}\n")
+
+            # Testing:
+            losses, kappas, mcc_list, conf_matrix_total_test, cm_total = test_model(model, test_sampler, loss_function, device)
+
+            # Calculating and printing statistics:
+            # Cross entropy loss
             mean_loss = sum(losses) / len(losses)
             mean_losses_test.append(mean_loss)
             print(f"\nEpoch {e + 1} testing done, loss on test set: {mean_loss}\n")
 
-            ### Plotting during training
-            plotext.clf()
-            plotext.scatter(mean_losses_train, label="train")
-            plotext.scatter(mean_losses_test, label="test")
-            plotext.title("Train and test loss")
+            # Confusion matrix
+            print(conf_matrix_total_test)
 
-            plotext.xticks([i for i in range(len(mean_losses_train) + 1)])
+            # Cohen's Kappa
+            # Average kappa over all batches
+            mean_kappa = sum(kappas) / len(kappas)
+            mean_kappas_test.append(mean_kappa)
+            print(f"\nEpoch {e + 1} testing done, average Cohen's kappa test set: {mean_kappa}")
 
-            plotext.show()
+            # Matthew's correlation coefficient
+            # Average MCC over all batches
+            mean_mcc = sum(mcc_list) / len(mcc_list)
+            mean_mcc_test.append(mean_mcc)
+            print(f"Epoch {e + 1} testing done, average MCC test set: {mean_mcc}\n")
+
+            # # Plotting during training
+            # plotext.clf()
+            # plotext.scatter(mean_losses_train, label="train")
+            # plotext.scatter(mean_losses_test, label="test")
+            # plotext.title("Train and test loss")
+            #
+            # plotext.xticks([i for i in range(len(mean_losses_train) + 1)])
+            #
+            # plotext.show()
 
     accuracy, true_labels, predicted_labels = test_accuracy(model, device)
     print(f'Test Accuracy: {accuracy * 100:.2f}%')
@@ -186,13 +225,14 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Saving the model
     torch.save(model.state_dict(), f"model_weights/model_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.txt")
 
-    # Create plot of losses
-    figure(figsize=(9, 10), dpi=80)
+    # Create plot of Cross Entropy losses
+    figure(figsize=(9, 16), dpi=80)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
 
     ax1.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_train], label="Train", color="blue")
     ax2.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_test], label="Test", color="red")
     fig.legend()
+    fig.suptitle('Cross Entropy loss over epochs')
 
     #Accuracy
 
@@ -202,7 +242,6 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     #Precision, Recall and F2 score
 
     calculate_additional_metrics(true_labels, predicted_labels)
-
     heatmap_plot(true_labels, predicted_labels)
     
     # Check if /artifacts/ subdir exists
@@ -210,8 +249,55 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
         os.mkdir(Path("artifacts/"))
 
     # save plot of losses
-    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.png")
+    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CrossEntropy.png")
 
+    # Create plot of Cohen's Kappas
+    figure(figsize=(9, 10), dpi=80)
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+
+    ax1.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_train], label="Train", color="blue")
+    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_test], label="Test", color="red")
+    fig.legend()
+    fig.suptitle("Cohen's Kappa over epochs")
+
+    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CohensKappa.png")
+
+    # Create plot of Matthews correlation coefficients
+    figure(figsize=(9, 10), dpi=80)
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+
+    ax1.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_train], label="Train", color="blue")
+    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_test], label="Test", color="red")
+    fig.legend()
+    fig.suptitle('Matthews Correlation Coefficient over epochs')
+
+    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_MCC.png")
+
+    # Create plot of heatmaps of final confusion matrix
+    fig, axs = plt.subplots(2, figsize=(10, 10))
+
+    sns.heatmap(conf_matrix_total_train, annot=True, fmt='d', ax=axs[0])
+    axs[0].set_ylabel('True label')
+    axs[0].set_xlabel('Predicted label')
+    axs[0].set_title('Final heatmap for train data')
+
+    sns.heatmap(conf_matrix_total_test, annot=True, fmt='d', ax=axs[1])
+    axs[1].set_ylabel('True label')
+    axs[1].set_xlabel('Predicted label')
+    axs[1].set_title('Final heatmap for test data')
+
+    fig.savefig(
+        Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_ConfusionMatrix.png")
+
+    # Save text file with confusion matrix (PyCM library) and all their metrics
+    with open(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_PyCM.txt", "a") as f:
+        # Printing CM and metrics gives None, so I manually copy it over
+        print(f'{cm_total.print_matrix()}', file=f)
+        print(f'{cm_total.stat(summary=True)}', file=f)
+
+        print(f'Imbalanced dataset?: {cm_total.imbalance}', file=f)
+        print(f'Binary classification?: {cm_total.binary}', file=f)
+        print(f'Recommended metrics: {cm_total.recommended_list}', file=f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
