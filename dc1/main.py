@@ -66,14 +66,14 @@ def perf_measure(y_actual, y_hat):
             FP += 1
     return (TP, FP, TN, FN)
 
-def heatmap_plot(y, predictions):
-    labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
-    cm = confusion_matrix(y, predictions)
-    sns.heatmap(cm, annot=True, fmt='d', xticklabels=labels, yticklabels=labels)
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix')
-    plt.show()
+# def heatmap_plot(y, predictions):
+#     labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
+#     cm = confusion_matrix(y, predictions)
+#     sns.heatmap(cm, annot=True, fmt='d', xticklabels=labels, yticklabels=labels)
+#     plt.xlabel('Predicted')
+#     plt.ylabel('True')
+#     plt.title('Confusion Matrix')
+#     plt.show()
 def calculate_additional_metrics(y_true, y_pred):
     precision = precision_score(y_true, y_pred, average='weighted')
     recall = recall_score(y_true, y_pred, average='weighted')
@@ -214,7 +214,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     TP, FP, TN, FN = perf_measure(true_labels, predicted_labels)
     print(f'TP={TP} FP={FP} TN={TN} FN={FN}')
 
-    heatmap_plot(true_labels, predicted_labels)
+    # heatmap_plot(true_labels, predicted_labels)
 
     # retrieve current time to label artifacts
     now = datetime.now()
@@ -242,7 +242,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     #Precision, Recall and F2 score
 
     calculate_additional_metrics(true_labels, predicted_labels)
-    heatmap_plot(true_labels, predicted_labels)
+    # heatmap_plot(true_labels, predicted_labels)
     
     # Check if /artifacts/ subdir exists
     if not Path("artifacts/").exists():
@@ -303,9 +303,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--nb_epochs", help="number of training iterations", default=10, type=int
+        "--nb_epochs", help="number of training iterations", default=34, type=int
     )
-    parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=10, type=int)
     parser.add_argument(
         "--balanced_batches",
         help="whether to balance batches for class labels",
