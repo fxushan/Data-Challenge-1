@@ -18,7 +18,7 @@ import argparse
 import plotext  # type: ignore
 from datetime import datetime
 from pathlib import Path
-from sklearn.metrics import confusion_matrix, recall_score, precision_score, fbeta_score
+from sklearn.metrics import confusion_matrix, recall_score, precision_score, fbeta_score, roc_auc_score
 from sklearn.preprocessing import label_binarize
 import numpy as np
 from typing import List
@@ -165,6 +165,12 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
     accuracy, true_labels, predicted_labels = test_accuracy(model, device)
     print(f'Test Accuracy: {accuracy * 100:.2f}%')
+
+    # Calculate AUC-ROC score
+    y_one_hot = label_binarize(true_labels, classes=[0, 1, 2, 3, 4, 5])
+    y_pred_one_hot = label_binarize(predicted_labels, classes=[0, 1, 2, 3, 4, 5])
+    auc_roc = roc_auc_score(y_one_hot, y_pred_one_hot, average="macro")
+    print(f'AUC-ROC Score: {auc_roc}')
 
     TP, FP, TN, FN = perf_measure(true_labels, predicted_labels)
     print(f'TP={TP} FP={FP} TN={TN} FN={FN}')
