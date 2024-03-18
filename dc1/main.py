@@ -18,14 +18,75 @@ import argparse
 import plotext  # type: ignore
 from datetime import datetime
 from pathlib import Path
+from sklearn.metrics import confusion_matrix, recall_score, precision_score, fbeta_score, roc_auc_score
+from sklearn.preprocessing import label_binarize
+import numpy as np
 from typing import List
+import seaborn as sns
 
+def load_data():
+    train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
+    test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
+    return train_dataset, test_dataset
+
+def test_accuracy(net, device="cpu"):
+    testset = ImageDataset(Path("./data/X_test.npy"), Path("./data/Y_test.npy"))
+    testloader = torch.utils.data.DataLoader(testset, batch_size=16, shuffle=False, num_workers=2)
+    correct = 0
+    total = 0
+    true_labels = []
+    predicted_labels = []
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data
+            images, labels = images.to(device), labels.to(device)
+            outputs = net(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            true_labels.extend(labels.cpu().numpy())
+            predicted_labels.extend(predicted.cpu().numpy())
+    return (correct / total, true_labels, predicted_labels)
+
+def perf_measure(y_actual, y_hat):
+    TP = 0
+    FP = 0
+    TN = 0
+    FN = 0
+    for i in range(len(y_hat)):
+        if y_actual[i] == y_hat[i] == 3:
+            TN += 1
+        elif y_actual[i] == y_hat[i]:
+            TP += 1
+        if y_hat[i] == 3 and y_actual[i] != y_hat[i]:
+            FN += 1
+        elif y_actual[i] != y_hat[i]:
+            FP += 1
+    return (TP, FP, TN, FN)
+
+def heatmap_plot(y, predictions):
+    labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
+    cm = confusion_matrix(y, predictions)
+    sns.heatmap(cm, annot=True, fmt='d', xticklabels=labels, yticklabels=labels)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix')
+    plt.show()
+def calculate_additional_metrics(y_true, y_pred):
+    precision = precision_score(y_true, y_pred, average='weighted')
+    recall = recall_score(y_true, y_pred, average='weighted')
+    f2_score = fbeta_score(y_true, y_pred, beta=2, average='weighted')
+
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F2 Score: {f2_score:.4f}")
 
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
     # Load the train and test data set
-    train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
-    test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
+    #train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
+    #test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
+    train_dataset, test_dataset = load_data()
 
     # Load the Neural Net. NOTE: set number of distinct labels here
     model = Net(n_classes=6)
@@ -102,6 +163,20 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
             plotext.show()
 
+    accuracy, true_labels, predicted_labels = test_accuracy(model, device)
+    print(f'Test Accuracy: {accuracy * 100:.2f}%')
+
+    # Calculate AUC-ROC score
+    y_one_hot = label_binarize(true_labels, classes=[0, 1, 2, 3, 4, 5])
+    y_pred_one_hot = label_binarize(predicted_labels, classes=[0, 1, 2, 3, 4, 5])
+    auc_roc = roc_auc_score(y_one_hot, y_pred_one_hot, average="macro")
+    print(f'AUC-ROC Score: {auc_roc}')
+
+    TP, FP, TN, FN = perf_measure(true_labels, predicted_labels)
+    print(f'TP={TP} FP={FP} TN={TN} FN={FN}')
+
+    heatmap_plot(true_labels, predicted_labels)
+
     # retrieve current time to label artifacts
     now = datetime.now()
     # check if model_weights/ subdir exists
@@ -119,6 +194,17 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     ax2.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_test], label="Test", color="red")
     fig.legend()
 
+    #Accuracy
+
+    accuracy, true_labels, predicted_labels = test_accuracy(model, device)
+    print(f'Test Accuracy: {accuracy*100:.2f}%')
+
+    #Precision, Recall and F2 score
+
+    calculate_additional_metrics(true_labels, predicted_labels)
+
+    heatmap_plot(true_labels, predicted_labels)
+    
     # Check if /artifacts/ subdir exists
     if not Path("artifacts/").exists():
         os.mkdir(Path("artifacts/"))
