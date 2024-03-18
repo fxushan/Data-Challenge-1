@@ -28,3 +28,4 @@ seaborn~=0.13.2
 scikit-learn~=1.4.1.post1
 pandas~=2.2.1
 pycm~=4.0
+
