@@ -11,6 +11,7 @@ from matplotlib.pyplot import figure
 import plotext  # type: ignore
 from sklearn.metrics import confusion_matrix, recall_score, precision_score, fbeta_score, roc_auc_score
 from sklearn.preprocessing import label_binarize
+from sklearn.model_selection import train_test_split
 import seaborn as sns
 # Torch imports
 import torch
@@ -19,17 +20,26 @@ import torch.optim as optim
 from matplotlib.pyplot import figure
 from torchsummary import summary  # type: ignore
 import numpy as np
+import sys
 
 from dc1.batch_sampler import BatchSampler
 from dc1.image_dataset import ImageDataset
 from dc1.net import Net
-from dc1.train_test import train_model, test_model
+from dc1.train_test import train_model, test_model, validation_model
+
+from evaluation_metrics import *
 
 
 def load_data():
     train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
     test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
-    return train_dataset, test_dataset
+    X_test = test_dataset.imgs
+    y_test = test_dataset.targets
+
+    X_test, X_val, y_test, y_val = train_test_split(X_test, y_test, test_size=0.3, random_state=777, stratify=y_test)
+    test_dataset = ImageDataset(X_test, y_test)
+    validation_dataset = ImageDataset(X_val, y_val)
+    return train_dataset, test_dataset, validation_dataset
 
 def test_accuracy(net, device="cpu"):
     testset = ImageDataset(Path("./data/X_test.npy"), Path("./data/Y_test.npy"))
@@ -84,10 +94,8 @@ def calculate_additional_metrics(y_true, y_pred):
     print(f"F2 Score: {f2_score:.4f}")
 
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
-    # Load the train and test data set
-    #train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
-    #test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
-    train_dataset, test_dataset = load_data()
+    # Load the train, validation and test data set
+    train_dataset, test_dataset, validation_dataset = load_data()
 
     # Load the Neural Net. NOTE: set number of distinct labels here
     model = Net(n_classes=6)
@@ -134,12 +142,16 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
         batch_size=100, dataset=test_dataset, balanced=args.balanced_batches
     )
 
+    validation_sampler = BatchSampler(
+        batch_size=100, dataset=validation_dataset, balanced=args.balanced_batches
+    )
+
     mean_losses_train: List[torch.Tensor] = []
-    mean_losses_test: List[torch.Tensor] = []
+    mean_losses_validation: List[torch.Tensor] = []
     mean_kappas_train = []
-    mean_kappas_test = []
+    mean_kappas_validation = []
     mean_mcc_train = []
-    mean_mcc_test = []
+    mean_mcc_validation = []
 
     for e in range(n_epochs):
         if activeloop:
@@ -168,39 +180,29 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             mean_mcc_train.append(mean_mcc)
             print(f"Epoch {e + 1} training done, average MCC train set: {mean_mcc}\n")
 
-            # Testing:
-            losses, kappas, mcc_list, conf_matrix_total_test, cm_total = test_model(model, test_sampler, loss_function, device)
+            # Validation:
+            losses, kappas, mcc_list, conf_matrix_total_validation, cm_total = validation_model(model, validation_sampler, loss_function, device)
 
             # Calculating and printing statistics:
             # Cross entropy loss
             mean_loss = sum(losses) / len(losses)
-            mean_losses_test.append(mean_loss)
-            print(f"\nEpoch {e + 1} testing done, loss on test set: {mean_loss}\n")
+            mean_losses_validation.append(mean_loss)
+            print(f"\nEpoch {e + 1} validation done, loss on validation set: {mean_loss}\n")
 
             # Confusion matrix
-            print(conf_matrix_total_test)
+            print(conf_matrix_total_validation)
 
             # Cohen's Kappa
             # Average kappa over all batches
             mean_kappa = sum(kappas) / len(kappas)
-            mean_kappas_test.append(mean_kappa)
-            print(f"\nEpoch {e + 1} testing done, average Cohen's kappa test set: {mean_kappa}")
+            mean_kappas_validation.append(mean_kappa)
+            print(f"\nEpoch {e + 1} validation done, average Cohen's kappa validation set: {mean_kappa}")
 
             # Matthew's correlation coefficient
             # Average MCC over all batches
             mean_mcc = sum(mcc_list) / len(mcc_list)
-            mean_mcc_test.append(mean_mcc)
-            print(f"Epoch {e + 1} testing done, average MCC test set: {mean_mcc}\n")
-
-            # # Plotting during training
-            # plotext.clf()
-            # plotext.scatter(mean_losses_train, label="train")
-            # plotext.scatter(mean_losses_test, label="test")
-            # plotext.title("Train and test loss")
-            #
-            # plotext.xticks([i for i in range(len(mean_losses_train) + 1)])
-            #
-            # plotext.show()
+            mean_mcc_validation.append(mean_mcc)
+            print(f"Epoch {e + 1} validation done, average MCC validation set: {mean_mcc}\n")
 
     accuracy, true_labels, predicted_labels = test_accuracy(model, device)
     print(f'Test Accuracy: {accuracy * 100:.2f}%')
@@ -214,13 +216,25 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     TP, FP, TN, FN = perf_measure(true_labels, predicted_labels)
     print(f'TP={TP} FP={FP} TN={TN} FN={FN}')
 
+    #Precision, Recall and F2 score
+    calculate_additional_metrics(true_labels, predicted_labels)
     heatmap_plot(true_labels, predicted_labels)
+
 
     # retrieve current time to label artifacts
     now = datetime.now()
     # check if model_weights/ subdir exists
     if not Path("model_weights/").exists():
         os.mkdir(Path("model_weights/"))
+    # Check if /artifacts/ subdir exists
+    if not Path("artifacts/").exists():
+        os.mkdir(Path("artifacts/"))
+
+    # Make directory & path for saving plots on testing data
+    result_plotting_directory = 'test'
+    if not Path(f"artifacts/{result_plotting_directory}/").exists():
+        os.mkdir(Path(f"artifacts/{result_plotting_directory}/"))
+    result_plotting_path: str = f"{result_plotting_directory}/session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}"
 
     # Saving the model
     torch.save(model.state_dict(), f"model_weights/model_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.txt")
@@ -228,76 +242,83 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Create plot of Cross Entropy losses
     figure(figsize=(9, 16), dpi=80)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-
     ax1.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_train], label="Train", color="blue")
-    ax2.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_test], label="Test", color="red")
+    ax2.plot(range(1, 1 + n_epochs), [x.detach().cpu() for x in mean_losses_validation], label="Validation",
+             color="red")
     fig.legend()
     fig.suptitle('Cross Entropy loss over epochs')
-
-    #Accuracy
-
-    accuracy, true_labels, predicted_labels = test_accuracy(model, device)
-    print(f'Test Accuracy: {accuracy*100:.2f}%')
-
-    #Precision, Recall and F2 score
-
-    calculate_additional_metrics(true_labels, predicted_labels)
-    heatmap_plot(true_labels, predicted_labels)
-    
-    # Check if /artifacts/ subdir exists
-    if not Path("artifacts/").exists():
-        os.mkdir(Path("artifacts/"))
-
-    # save plot of losses
-    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CrossEntropy.png")
+    fig.savefig(
+        Path(
+            "artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CrossEntropy_train_val.png")
 
     # Create plot of Cohen's Kappas
     figure(figsize=(9, 10), dpi=80)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-
     ax1.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_train], label="Train", color="blue")
-    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_test], label="Test", color="red")
+    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_kappas_validation], label="Validation", color="red")
     fig.legend()
     fig.suptitle("Cohen's Kappa over epochs")
-
-    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CohensKappa.png")
+    fig.savefig(
+        Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_CohensKappa_train_val.png")
 
     # Create plot of Matthews correlation coefficients
     figure(figsize=(9, 10), dpi=80)
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-
     ax1.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_train], label="Train", color="blue")
-    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_test], label="Test", color="red")
+    ax2.plot(range(1, 1 + n_epochs), [x for x in mean_mcc_validation], label="Validation", color="red")
     fig.legend()
     fig.suptitle('Matthews Correlation Coefficient over epochs')
-
-    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_MCC.png")
+    fig.savefig(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_MCC_train_val.png")
 
     # Create plot of heatmaps of final confusion matrix
     fig, axs = plt.subplots(2, figsize=(10, 10))
-
     sns.heatmap(conf_matrix_total_train, annot=True, fmt='d', ax=axs[0])
     axs[0].set_ylabel('True label')
     axs[0].set_xlabel('Predicted label')
     axs[0].set_title('Final heatmap for train data')
-
-    sns.heatmap(conf_matrix_total_test, annot=True, fmt='d', ax=axs[1])
+    sns.heatmap(conf_matrix_total_validation, annot=True, fmt='d', ax=axs[1])
     axs[1].set_ylabel('True label')
     axs[1].set_xlabel('Predicted label')
-    axs[1].set_title('Final heatmap for test data')
-
+    axs[1].set_title('Final heatmap for validation data')
     fig.savefig(
-        Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_ConfusionMatrix.png")
+        Path(
+            "artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_ConfusionMatrix_train_val.png")
+
+    # Plots for testing dataset:
+    losses, kappas, mcc_list, conf_matrix_total_test, cm_total = test_model(model, test_sampler, loss_function, device)
+    # Cross Entropy Loss
+    mean_loss_test = sum(losses) / len(losses)
+    # Cohen's Kappa
+    mean_kappa_test = sum(kappas) / len(kappas)
+    # Matthew's correlation coefficient
+    mean_mcc_test = sum(mcc_list) / len(mcc_list)
+
+    print(cm_total.stat(summary=True))
 
     # Save text file with confusion matrix (PyCM library) and all their metrics
-    with open(Path("artifacts") / f"session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}_PyCM.txt", "a") as f:
+    with open(Path("artifacts") / f"{result_plotting_path}_PyCM_test.txt", "a") as f:
+        print(f'Mean cross entropy loss: {mean_loss_test}', file=f)
+        print(f"Mean Cohen's Kappa: {mean_kappa_test}", file=f)
+        print(f"Mean Matthew's correlation coefficient: {mean_mcc_test}", file=f)
+
         # Printing CM and metrics gives None, so I manually copy it over
-        print(f'{cm_total.print_matrix()}', file=f)
-        print(f'{cm_total.stat(summary=True)}', file=f)
+        sys.stdout = f  # Redirect standard output to the file
+        print(f'{cm_total}', file=f)
+        sys.stdout = sys.__stdout__  # Reset standard output to the console
 
         print(f'Imbalanced dataset?: {cm_total.imbalance}', file=f)
         print(f'Binary classification?: {cm_total.binary}', file=f)
         print(f'Recommended metrics: {cm_total.recommended_list}', file=f)
+
+    # Create plot of heatmaps of final confusion matrix
+    fig, axs = plt.subplots(figsize=(10, 10))
+    labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
+    sns.heatmap(conf_matrix_total_test, annot=True, fmt='d', xticklabels=labels, yticklabels=labels, ax=axs)
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.title('Final heatmap for test data')
+    plt.savefig(
+        Path("artifacts") / f"{result_plotting_path}_ConfusionMatrix_test.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

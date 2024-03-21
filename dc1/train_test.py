@@ -88,6 +88,60 @@ def train_model(
         optimizer.step()
     return losses, kappas, mcc_list, conf_matrix_total, cm_total
 
+def validation_model(
+        model: Net,
+        validation_sampler: BatchSampler,
+        loss_function: Callable[..., torch.Tensor],
+        device: str,
+) -> tuple[List[Tensor], List[float], List[float], int | Any, int | ConfusionMatrix | Any]:
+    # Setting the model to evaluation mode:
+    model.eval()
+    losses = []
+    kappas = []
+    mcc_list = []
+    conf_matrix_total = 0
+    cm_total = 0
+    batch_number = 0
+    # We need to make sure we do not update our model based on the test data:
+    with torch.no_grad():
+        for (x, y) in tqdm(validation_sampler):
+            # Making sure our samples are stored on the same device as our model:
+            x = x.to(device)
+            y = y.to(device)
+            prediction = model.forward(x)
+
+            # Get probabilities and predicted classes
+            probabilities = torch.nn.functional.softmax(prediction, dim=1)
+            _, predicted_classes = torch.max(probabilities, dim=1)
+
+            # Cross entropy
+            loss = loss_function(prediction, y)
+            losses.append(loss)
+
+            # Cohen's Kappa
+            predictions_np = predicted_classes.detach().cpu().numpy()
+            labels_np = y.detach().cpu().numpy()
+            kappa = cohen_kappa_score(predictions_np, labels_np)
+            kappas.append(kappa)
+
+            # Matthew's Correlation Coefficient
+            mcc = matthews_corrcoef(predictions_np, labels_np)
+            mcc_list.append(mcc)
+
+            # Confusion matrix
+            labels = list(range(0, 6))
+            conf_matrix_batch = confusion_matrix(y_pred=predictions_np, y_true=labels_np, labels=labels)
+            conf_matrix_total = conf_matrix_batch + conf_matrix_total
+
+            # Confusion Matrix 2
+            if batch_number == 0:
+                cm_total = ConfusionMatrix(actual_vector=labels_np, predict_vector=predictions_np,
+                                           classes=[0, 1, 2, 3, 4, 5])
+                batch_number += 1
+            elif batch_number != 0:
+                cm = ConfusionMatrix(actual_vector=labels_np, predict_vector=predictions_np, classes=[0, 1, 2, 3, 4, 5])
+                cm_total = cm_total.combine(cm)
+    return losses, kappas, mcc_list, conf_matrix_total, cm_total
 
 def test_model(
         model: Net,

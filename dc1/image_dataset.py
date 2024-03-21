@@ -6,6 +6,7 @@ from os import path
 from typing import Tuple
 from pathlib import Path
 import os
+import inspect
 
 
 class ImageDataset:
@@ -18,9 +19,15 @@ class ImageDataset:
 
     def __init__(self, x: Path, y: Path) -> None:
         # Target labels
-        self.targets = ImageDataset.load_numpy_arr_from_npy(y)
+        if isinstance(y, np.ndarray):
+            self.targets = y
+        else:
+            self.targets = ImageDataset.load_numpy_arr_from_npy(y)
         # Images
-        self.imgs = ImageDataset.load_numpy_arr_from_npy(x)
+        if isinstance(x, np.ndarray):
+            self.imgs = x
+        else:
+            self.imgs = ImageDataset.load_numpy_arr_from_npy(x)
 
     def __len__(self) -> int:
         return len(self.targets)
