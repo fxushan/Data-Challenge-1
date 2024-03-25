@@ -1,0 +1,10 @@
+Comparison of PyCM confusion matrices of the base model without augmentation vs. the base model with IMAUG augmentation
+Epochs: 10. Batch Sizes: 25.
+Both models are trained 10 times, with the averages as final results.
+
+Best : Base_No_Augment
+
+Rank  Name                  Class-Score       Overall-Score
+1     Base_No_Augment       0.28889           0.33333
+2     Base_imaug_Augment    0.28333           0.33333
+

@@ -1,0 +1,50 @@
+RESULTS BASE MODEL | X_train_augmented.npy AUGMENTED DATA
+
+Predict   0         1         2         3         4         5
+Actual
+0         161       16        463       2         34        5
+
+1         96        31        521       1         21        11
+
+2         73        14        538       0         50        6
+
+3         97        13        492       3         68        8
+
+4         111       9         480       3         74        4
+
+5         89        17        522       4         34        15
+
+Overall Statistics :
+ACC Macro                                                         0.73372
+F1 Macro                                                          0.1367
+FPR Macro                                                         0.15977
+Kappa                                                             0.04141
+NPV Macro                                                         0.84366
+Overall ACC                                                       0.20117
+PPV Macro                                                         0.25757
+SOA1(Landis & Koch)                                               Slight
+TPR Macro                                                         0.20117
+Zero-one Loss                                                     3264
+
+Class Statistics :
+Classes                                                           0             1             2             3             4             5
+ACC(Accuracy)                                                     0.75869       0.82403       0.35854       0.83162       0.80078       0.82868
+AUC(Area under the ROC curve)                                     0.54978       0.51263       0.53113       0.50073       0.52394       0.50602
+AUCI(AUC value interpretation)                                    Poor          Poor          Poor          Poor          Poor          Poor
+F1(F1 score - harmonic mean of precision and sensitivity)         0.24618       0.07939       0.29105       0.00865       0.15385       0.0411
+FN(False negative/miss/type 2 error)                              520           650           143           678           607           666
+FP(False positive/type 1 error/false alarm)                       466           69            2478          10            207           34
+FPR(Fall-out or false positive rate)                              0.13686       0.02026       0.72775       0.00294       0.06079       0.00999
+N(Condition negative)                                             3405          3405          3405          3405          3405          3405
+P(Condition positive or support)                                  681           681           681           681           681           681
+POP(Population)                                                   4086          4086          4086          4086          4086          4086
+PPV(Precision or positive predictive value)                       0.25678       0.31          0.17838       0.23077       0.26335       0.30612
+TN(True negative/correct rejection)                               2939          3336          927           3395          3198          3371
+TON(Test outcome negative)                                        3459          3986          1070          4073          3805          4037
+TOP(Test outcome positive)                                        627           100           3016          13            281           49
+TP(True positive/hit)                                             161           31            538           3             74            15
+TPR(Sensitivity, recall, hit rate, or true positive rate)         0.23642       0.04552       0.79001       0.00441       0.10866       0.02203
+
+Imbalanced dataset?: False
+Binary classification?: False
+Recommended metrics: ['ERR', 'TPR Micro', 'TPR Macro', 'F1 Macro', 'PPV Macro', 'NPV Macro', 'ACC', 'Overall ACC', 'MCC', 'MCCI', 'Overall MCC', 'SOA6(Matthews)', 'BCD', 'Hamming Loss', 'Zero-one Loss']

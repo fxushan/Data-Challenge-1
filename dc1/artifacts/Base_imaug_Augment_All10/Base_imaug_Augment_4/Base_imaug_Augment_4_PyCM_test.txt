@@ -1,0 +1,165 @@
+Mean cross entropy loss: 1.7298249006271362
+Mean Cohen's Kappa: 0.10912374755676083
+Mean Matthew's correlation coefficient: 0.11373680380871966
+
+
+Predict   0         1         2         3         4         5         
+Actual
+0         202       93        91        31        2         58        
+
+1         102       178       101       26        1         69        
+
+2         99        109       136       34        1         98        
+
+3         133       63        122       64        1         94        
+
+4         138       48        112       61        0         118       
+
+5         79        87        129       23        1         158       
+
+
+
+
+
+Overall Statistics : 
+
+95% CI                                                            (0.24183,0.27389)
+ACC Macro                                                         0.75262
+ARI                                                               0.02155
+AUNP                                                              0.55472
+AUNU                                                              0.55472
+Bangdiwala B                                                      0.08793
+Bennett S                                                         0.10943
+CBA                                                               0.19546
+CSI                                                               -0.52441
+Chi-Squared                                                       303.65926
+Chi-Squared DF                                                    25
+Conditional Entropy                                               2.18356
+Cramer V                                                          0.14567
+Cross Entropy                                                     3.50505
+F1 Macro                                                          0.22872
+F1 Micro                                                          0.25786
+FNR Macro                                                         0.74214
+FNR Micro                                                         0.74214
+FPR Macro                                                         0.14843
+FPR Micro                                                         0.14843
+Gwet AC1                                                          0.1122
+Hamming Loss                                                      0.74214
+Joint Entropy                                                     4.76852
+KL Divergence                                                     0.92009
+Kappa                                                             0.10943
+Kappa 95% CI                                                      (0.0902,0.12867)
+Kappa No Prevalence                                               -0.48428
+Kappa Standard Error                                              0.00981
+Kappa Unbiased                                                    0.09537
+Krippendorff Alpha                                                0.09552
+Lambda A                                                          0.11027
+Lambda B                                                          0.09104
+Mutual Information                                                0.07324
+NIR                                                               0.16667
+NPV Macro                                                         0.85274
+NPV Micro                                                         0.85157
+Overall ACC                                                       0.25786
+Overall CEN                                                       0.75983
+Overall J                                                         (0.80227,0.13371)
+Overall MCC                                                       0.113
+Overall MCEN                                                      0.82318
+Overall RACC                                                      0.16667
+Overall RACCU                                                     0.17963
+P-Value                                                           None
+PPV Macro                                                         0.21773
+PPV Micro                                                         0.25786
+Pearson C                                                         0.30971
+Phi-Squared                                                       0.1061
+RCI                                                               0.02833
+RR                                                                477.0
+Reference Entropy                                                 2.58496
+Response Entropy                                                  2.2568
+SOA1(Landis & Koch)                                               Slight
+SOA2(Fleiss)                                                      Poor
+SOA3(Altman)                                                      Poor
+SOA4(Cicchetti)                                                   Poor
+SOA5(Cramer)                                                      Weak
+SOA6(Matthews)                                                    Negligible
+SOA7(Lambda A)                                                    Very Weak
+SOA8(Lambda B)                                                    Very Weak
+SOA9(Krippendorff Alpha)                                          Low
+SOA10(Pearson C)                                                  Strong
+Scott PI                                                          0.09537
+Standard Error                                                    0.00818
+TNR Macro                                                         0.85157
+TNR Micro                                                         0.85157
+TPR Macro                                                         0.25786
+TPR Micro                                                         0.25786
+Zero-one Loss                                                     2124
+
+Class Statistics :
+
+Classes                                                           0             1             2             3             4             5             
+ACC(Accuracy)                                                     0.71139       0.75577       0.68693       0.79455       0.83124       0.73585       
+AGF(Adjusted F-score)                                             0.56714       0.55535       0.46506       0.35763       0.0           0.51809       
+AGM(Adjusted geometric mean)                                      0.6608        0.68229       0.60389       0.61352       0             0.65497       
+AM(Difference between automatic and manual classification)        276           101           214           -238          -471          118           
+AUC(Area under the ROC curve)                                     0.59623       0.60273       0.52621       0.5304        0.49874       0.574         
+AUCI(AUC value interpretation)                                    Poor          Fair          Poor          Poor          Poor          Poor          
+AUPR(Area under the PR curve)                                     0.34587       0.34056       0.24097       0.20098       0.0           0.29839       
+BB(Braun-Blanquet similarity)                                     0.26826       0.30796       0.19682       0.13417       0.0           0.26555       
+BCD(Bray-Curtis dissimilarity)                                    0.04822       0.01765       0.03739       0.04158       0.08229       0.02061       
+BM(Informedness or bookmaker informedness)                        0.19245       0.20545       0.05241       0.0608        -0.00252      0.14801       
+CEN(Confusion entropy)                                            0.7412        0.73396       0.80869       0.79264       0.6974        0.75964       
+DOR(Diagnostic odds ratio)                                        2.44493       2.95426       1.31505       1.95697       0.0           2.20787       
+DP(Discriminant power)                                            0.21406       0.25937       0.06558       0.16076       None          0.18964       
+DPI(Discriminant power interpretation)                            Poor          Poor          Poor          Poor          None          Poor          
+ERR(Error rate)                                                   0.28861       0.24423       0.31307       0.20545       0.16876       0.26415       
+F0.5(F0.5 score)                                                  0.28948       0.31911       0.20981       0.22331       0.0           0.27651       
+F1(F1 score - harmonic mean of precision and sensitivity)         0.32846       0.33744       0.23288       0.17877       0.0           0.29478       
+F2(F2 score)                                                      0.37956       0.358         0.26164       0.14905       0.0           0.31562       
+FDR(False discovery rate)                                         0.73174       0.69204       0.80318       0.73222       1.0           0.73445       
+FN(False negative/miss/type 2 error)                              275           299           341           413           477           319           
+FNR(Miss rate or false negative rate)                             0.57652       0.62683       0.71488       0.86583       1.0           0.66876       
+FOR(False omission rate)                                          0.13039       0.13091       0.15707       0.15745       0.16702       0.14071       
+FP(False positive/type 1 error/false alarm)                       551           400           555           175           6             437           
+FPR(Fall-out or false positive rate)                              0.23103       0.16771       0.2327        0.07338       0.00252       0.18323       
+G(G-measure geometric mean of precision and sensitivity)          0.33705       0.339         0.23689       0.18955       0.0           0.29658       
+GI(Gini index)                                                    0.19245       0.20545       0.05241       0.0608        -0.00252      0.14801       
+GM(G-mean geometric mean of specificity and sensitivity)          0.57065       0.5573        0.46773       0.3526        0.0           0.52014       
+HD(Hamming distance)                                              826           699           896           588           483           756           
+IBA(Index of balanced accuracy)                                   0.21314       0.16799       0.11328       0.0258        0.0           0.13919       
+ICSI(Individual classification success index)                     -0.30826      -0.31888      -0.51807      -0.59805      -1.0          -0.40322      
+IS(Information score)                                             0.68667       0.88577       0.23988       0.6841        None          0.672         
+J(Jaccard index)                                                  0.1965        0.20296       0.13178       0.09816       0.0           0.17287       
+LS(Lift score)                                                    1.60956       1.84775       1.1809        1.60669       0.0           1.59328       
+MCC(Matthews correlation coefficient)                             0.16289       0.19072       0.04564       0.0819        -0.0205       0.13593       
+MCCI(Matthews correlation coefficient interpretation)             Negligible    Negligible    Negligible    Negligible    Negligible    Negligible    
+MCEN(Modified confusion entropy)                                  0.82424       0.81896       0.86858       0.83377       0.6974        0.83368       
+MK(Markedness)                                                    0.13787       0.17705       0.03975       0.11033       -0.16702      0.12483       
+N(Condition negative)                                             2385          2385          2385          2385          2385          2385          
+NLR(Negative likelihood ratio)                                    0.74973       0.75315       0.93169       0.93439       1.00252       0.81879       
+NLRI(Negative likelihood ratio interpretation)                    Negligible    Negligible    Negligible    Negligible    Negligible    Negligible    
+NPV(Negative predictive value)                                    0.86961       0.86909       0.84293       0.84255       0.83298       0.85929       
+OC(Overlap coefficient)                                           0.42348       0.37317       0.28512       0.26778       0.0           0.33124       
+OOC(Otsuka-Ochiai coefficient)                                    0.33705       0.339         0.23689       0.18955       0.0           0.29658       
+OP(Optimized precision)                                           0.42166       0.3749        0.22876       0.04751       -0.16876      0.31291       
+P(Condition positive or support)                                  477           477           477           477           477           477           
+PLR(Positive likelihood ratio)                                    1.83303       2.225         1.22523       1.82857       0.0           1.80778       
+PLRI(Positive likelihood ratio interpretation)                    Poor          Poor          Poor          Poor          Negligible    Poor          
+POP(Population)                                                   2862          2862          2862          2862          2862          2862          
+PPV(Precision or positive predictive value)                       0.26826       0.30796       0.19682       0.26778       0.0           0.26555       
+PRE(Prevalence)                                                   0.16667       0.16667       0.16667       0.16667       0.16667       0.16667       
+Q(Yule Q - coefficient of colligation)                            0.41944       0.49422       0.13609       0.32363       -1.0          0.37653       
+QI(Yule Q interpretation)                                         Weak          Weak          Negligible    Weak          Negligible    Weak          
+RACC(Random accuracy)                                             0.04385       0.03366       0.04024       0.01392       0.00035       0.03465       
+RACCU(Random accuracy unbiased)                                   0.04618       0.03397       0.04164       0.01565       0.00712       0.03507       
+TN(True negative/correct rejection)                               1834          1985          1830          2210          2379          1948          
+TNR(Specificity or true negative rate)                            0.76897       0.83229       0.7673        0.92662       0.99748       0.81677       
+TON(Test outcome negative)                                        2109          2284          2171          2623          2856          2267          
+TOP(Test outcome positive)                                        753           578           691           239           6             595           
+TP(True positive/hit)                                             202           178           136           64            0             158           
+TPR(Sensitivity, recall, hit rate, or true positive rate)         0.42348       0.37317       0.28512       0.13417       0.0           0.33124       
+Y(Youden index)                                                   0.19245       0.20545       0.05241       0.0608        -0.00252      0.14801       
+dInd(Distance index)                                              0.62109       0.64888       0.75181       0.86893       1.0           0.69341       
+sInd(Similarity index)                                            0.56083       0.54117       0.46839       0.38557       0.29289       0.50969       
+
+Imbalanced dataset?: False
+Binary classification?: False
+Recommended metrics: ['ERR', 'TPR Micro', 'TPR Macro', 'F1 Macro', 'PPV Macro', 'NPV Macro', 'ACC', 'Overall ACC', 'MCC', 'MCCI', 'Overall MCC', 'SOA6(Matthews)', 'BCD', 'Hamming Loss', 'Zero-one Loss']

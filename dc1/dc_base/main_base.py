@@ -22,16 +22,16 @@ from torchsummary import summary  # type: ignore
 import numpy as np
 import sys
 
-from dc1.batch_sampler import BatchSampler
-from dc1.image_dataset import ImageDataset
-from dc1.net import Net
-from dc1.train_test import train_model, test_model, validation_model
+from dc_base.batch_sampler_base import BatchSampler
+from dc_base.image_dataset_base import ImageDataset
+from dc_base.net_base import Net
+from dc_base.train_test_base import train_model, test_model, validation_model
 
-from evaluation_metrics import *
+from dc_base.evaluation_metrics_base import *
 
 
-def load_data():
-    train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
+def load_data(X_train_set, Y_train_set):
+    train_dataset = ImageDataset(Path(f"data/{X_train_set}"), Path(f"data/{Y_train_set}"))
     test_dataset = ImageDataset(Path("data/X_test.npy"), Path("data/Y_test.npy"))
     X_test = test_dataset.imgs
     y_test = test_dataset.targets
@@ -41,61 +41,9 @@ def load_data():
     validation_dataset = ImageDataset(X_val, y_val)
     return train_dataset, test_dataset, validation_dataset
 
-def test_accuracy(net, device="cpu"):
-    testset = ImageDataset(Path("./data/X_test.npy"), Path("./data/Y_test.npy"))
-    testloader = torch.utils.data.DataLoader(testset, batch_size=16, shuffle=False, num_workers=2)
-    correct = 0
-    total = 0
-    true_labels = []
-    predicted_labels = []
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            images, labels = images.to(device), labels.to(device)
-            outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-            true_labels.extend(labels.cpu().numpy())
-            predicted_labels.extend(predicted.cpu().numpy())
-    return (correct / total, true_labels, predicted_labels)
-
-def perf_measure(y_actual, y_hat):
-    TP = 0
-    FP = 0
-    TN = 0
-    FN = 0
-    for i in range(len(y_hat)):
-        if y_actual[i] == y_hat[i] == 3:
-            TN += 1
-        elif y_actual[i] == y_hat[i]:
-            TP += 1
-        if y_hat[i] == 3 and y_actual[i] != y_hat[i]:
-            FN += 1
-        elif y_actual[i] != y_hat[i]:
-            FP += 1
-    return (TP, FP, TN, FN)
-
-def heatmap_plot(y, predictions):
-    labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
-    cm = confusion_matrix(y, predictions)
-    sns.heatmap(cm, annot=True, fmt='d', xticklabels=labels, yticklabels=labels)
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix')
-    plt.show()
-def calculate_additional_metrics(y_true, y_pred):
-    precision = precision_score(y_true, y_pred, average='weighted')
-    recall = recall_score(y_true, y_pred, average='weighted')
-    f2_score = fbeta_score(y_true, y_pred, beta=2, average='weighted')
-
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall: {recall:.4f}")
-    print(f"F2 Score: {f2_score:.4f}")
-
-def main(args: argparse.Namespace, activeloop: bool = True) -> None:
+def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.Namespace, activeloop: bool = True) -> None:
     # Load the train, validation and test data set
-    train_dataset, test_dataset, validation_dataset = load_data()
+    train_dataset, test_dataset, validation_dataset = load_data(X_train_set, Y_train_set)
 
     # Load the Neural Net. NOTE: set number of distinct labels here
     model = Net(n_classes=6)
@@ -155,6 +103,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
     for e in range(n_epochs):
         if activeloop:
+            print(f'Epoch {e}...')
             # Training:
             losses, kappas, mcc_list, conf_matrix_total_train, cm_total = train_model(model, train_sampler, optimizer,
                                                                             loss_function, device)
@@ -163,22 +112,19 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             # Cross entropy loss
             mean_loss = sum(losses) / len(losses)
             mean_losses_train.append(mean_loss)
-            print(f"\nEpoch {e + 1} training done, loss on train set: {mean_loss}\n")
 
-            # Confusion matrix
-            print(conf_matrix_total_train)
+            # # Confusion matrix
+            # print(conf_matrix_total_train)
 
             # Cohen's Kappa
             # Average kappa over all batches
             mean_kappa = sum(kappas) / len(kappas)
             mean_kappas_train.append(mean_kappa)
-            print(f"\nEpoch {e + 1} training done, average Cohen's kappa train set: {mean_kappa}")
 
             # Matthew's correlation coefficient
             # Average MCC over all batches
             mean_mcc = sum(mcc_list) / len(mcc_list)
             mean_mcc_train.append(mean_mcc)
-            print(f"Epoch {e + 1} training done, average MCC train set: {mean_mcc}\n")
 
             # Validation:
             losses, kappas, mcc_list, conf_matrix_total_validation, cm_total = validation_model(model, validation_sampler, loss_function, device)
@@ -187,39 +133,19 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             # Cross entropy loss
             mean_loss = sum(losses) / len(losses)
             mean_losses_validation.append(mean_loss)
-            print(f"\nEpoch {e + 1} validation done, loss on validation set: {mean_loss}\n")
 
-            # Confusion matrix
-            print(conf_matrix_total_validation)
+            # # Confusion matrix
+            # print(conf_matrix_total_validation)
 
             # Cohen's Kappa
             # Average kappa over all batches
             mean_kappa = sum(kappas) / len(kappas)
             mean_kappas_validation.append(mean_kappa)
-            print(f"\nEpoch {e + 1} validation done, average Cohen's kappa validation set: {mean_kappa}")
 
             # Matthew's correlation coefficient
             # Average MCC over all batches
             mean_mcc = sum(mcc_list) / len(mcc_list)
             mean_mcc_validation.append(mean_mcc)
-            print(f"Epoch {e + 1} validation done, average MCC validation set: {mean_mcc}\n")
-
-    accuracy, true_labels, predicted_labels = test_accuracy(model, device)
-    print(f'Test Accuracy: {accuracy * 100:.2f}%')
-
-    # Calculate AUC-ROC score
-    y_one_hot = label_binarize(true_labels, classes=[0, 1, 2, 3, 4, 5])
-    y_pred_one_hot = label_binarize(predicted_labels, classes=[0, 1, 2, 3, 4, 5])
-    auc_roc = roc_auc_score(y_one_hot, y_pred_one_hot, average="macro")
-    print(f'AUC-ROC Score: {auc_roc}')
-
-    TP, FP, TN, FN = perf_measure(true_labels, predicted_labels)
-    print(f'TP={TP} FP={FP} TN={TN} FN={FN}')
-
-    #Precision, Recall and F2 score
-    calculate_additional_metrics(true_labels, predicted_labels)
-    heatmap_plot(true_labels, predicted_labels)
-
 
     # retrieve current time to label artifacts
     now = datetime.now()
@@ -231,19 +157,18 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
         os.mkdir(Path("artifacts/"))
 
     # Make directory & path for saving plots on testing data
-    result_plotting_directory = 'test'
-    if not Path(f"artifacts/{result_plotting_directory}/").exists():
-        os.mkdir(Path(f"artifacts/{result_plotting_directory}/"))
-    result_plotting_path: str = f"{result_plotting_directory}/session_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}"
+    if not Path(f"artifacts/{artifact_path_name}/").exists():
+        os.mkdir(Path(f"artifacts/{artifact_path_name}/"))
+    result_plotting_path: str = f"{artifact_path_name}/{artifact_path_name}"
 
-    # Saving the model
-    torch.save(model.state_dict(), f"model_weights/model_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.txt")
+    # # Saving the model
+    # torch.save(model.state_dict(), f"model_weights/model_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.txt")
 
     # Create and save all plots for training and validation datasets
-    plot_cross_entropy_losses(n_epochs, mean_losses_train, mean_losses_validation)
-    plot_cohens_kappa(n_epochs, mean_kappas_train, mean_kappas_validation)
-    plot_MCC(n_epochs, mean_mcc_train, mean_mcc_validation)
-    plot_heatmaps(conf_matrix_total_train, conf_matrix_total_validation)
+    plot_cross_entropy_losses(n_epochs, mean_losses_train, mean_losses_validation, result_plotting_path)
+    plot_cohens_kappa(n_epochs, mean_kappas_train, mean_kappas_validation, result_plotting_path)
+    plot_MCC(n_epochs, mean_mcc_train, mean_mcc_validation, result_plotting_path)
+    plot_heatmaps(conf_matrix_total_train, conf_matrix_total_validation, result_plotting_path)
 
     # Plots for testing dataset:
     losses, kappas, mcc_list, conf_matrix_total_test, cm_total = test_model(model, test_sampler, loss_function, device)
@@ -254,13 +179,14 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Matthew's correlation coefficient
     mean_mcc_test = sum(mcc_list) / len(mcc_list)
 
-    print(cm_total.stat(summary=True))
+    # print(cm_total.stat(summary=True))
 
     # Save text file with confusion matrix (PyCM library) and all their metrics
     with open(Path("artifacts") / f"{result_plotting_path}_PyCM_test.txt", "a") as f:
         print(f'Mean cross entropy loss: {mean_loss_test}', file=f)
         print(f"Mean Cohen's Kappa: {mean_kappa_test}", file=f)
         print(f"Mean Matthew's correlation coefficient: {mean_mcc_test}", file=f)
+        print(f"\n", file=f)
 
         sys.stdout = f  # Redirect standard output to the file
         print(f'{cm_total}', file=f)
@@ -280,6 +206,8 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     plt.savefig(
         Path("artifacts") / f"{result_plotting_path}_ConfusionMatrix_test.png")
 
+    return conf_matrix_total_test, mean_loss_test, mean_kappa_test, mean_mcc_test
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -295,4 +223,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args)
+    run_main_base(args)
+
+
