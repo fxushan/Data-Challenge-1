@@ -102,6 +102,21 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
 
             plotext.show()
 
+    # Calculate accuracy
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for images, labels in test_sampler:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    accuracy = correct / total
+    print(f"Accuracy: {100 * accuracy:.2f}%")
+
     # retrieve current time to label artifacts
     now = datetime.now()
     # check if model_weights/ subdir exists
