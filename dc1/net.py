@@ -14,20 +14,27 @@ class Net(nn.Module):
             nn.ELU(alpha=alpha_1),
             nn.MaxPool2d(kernel_size=4),
             nn.Dropout(p=0.5),
-            nn.Conv2d(64, 32, kernel_size=4, stride=1),
-            nn.BatchNorm2d(32),
+
+            nn.Conv2d(64, 128, kernel_size=3, stride=1),
+            nn.BatchNorm2d(128),
             nn.ELU(alpha=alpha_2),
-            nn.MaxPool2d(kernel_size=3),
+            nn.MaxPool2d(kernel_size=2),
             nn.Dropout(p=0.25),
-            nn.Conv2d(32, 16, kernel_size=4, stride=1),
-            nn.BatchNorm2d(16),
+
+            nn.Conv2d(128, 256, kernel_size=3, stride=1),
+            nn.BatchNorm2d(256),
             nn.ELU(alpha=alpha_3),
             nn.MaxPool2d(kernel_size=2),
             nn.Dropout(p=0.125),
         )
+
+        # Adjusting the size after convolutional layers
+        self.flatten_size = 256 * 6 * 6  # Update based on the output size of the last conv layer
+
         self.linear_layers = nn.Sequential(
-            nn.Linear(144, 256),
-            nn.Linear(256, n_classes)
+            nn.Linear(self.flatten_size, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, n_classes)
         )
 
 
