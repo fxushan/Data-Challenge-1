@@ -2,6 +2,22 @@
 import torch
 import torch.nn as nn
 
+import random
+
+class StochasticDepth(nn.Module):
+    def __init__(self, drop_prob: float = 0.5):
+        super(StochasticDepth, self).__init__()
+        self.drop_prob = drop_prob
+
+    def forward(self, x):
+        if not self.training:
+            return x
+
+        if random.random() < self.drop_prob:
+            return x
+
+        return torch.zeros_like(x)
+
 
 class Net(nn.Module):
     # Leaky ReLU slope_1: float = 0.6807524246386062, slope_2: float = 0.053947204697184746, slope_3: float = 0.5569877536243514
@@ -9,19 +25,19 @@ class Net(nn.Module):
     def __init__(self, n_classes: int = 6, alpha_1=1.0887779628058707, alpha_2=1.6631499652552382, alpha_3=1.9301193111245831) -> None:
         super(Net, self).__init__()
         self.cnn_layers = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=4, stride=1),
+            nn.Conv2d(1, 64, kernel_size=3, padding='same'),
             nn.BatchNorm2d(64),
             nn.ELU(alpha=alpha_1),
             nn.MaxPool2d(kernel_size=4),
             nn.Dropout(p=0.5),
 
-            nn.Conv2d(64, 128, kernel_size=3, stride=1),
+            nn.Conv2d(64, 128, kernel_size=3, padding='same'),
             nn.BatchNorm2d(128),
             nn.ELU(alpha=alpha_2),
             nn.MaxPool2d(kernel_size=2),
             nn.Dropout(p=0.25),
 
-            nn.Conv2d(128, 256, kernel_size=3, stride=1),
+            nn.Conv2d(128, 256, kernel_size=3, padding='same'),
             nn.BatchNorm2d(256),
             nn.ELU(alpha=alpha_3),
             nn.MaxPool2d(kernel_size=2),
