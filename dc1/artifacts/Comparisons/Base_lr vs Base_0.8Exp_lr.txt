@@ -1,0 +1,10 @@
+Comparison of PyCM confusion matrices of base model, with no changes to learning rate (0.001 over all epochs) vs. base model with initial 0.01, and an exponential decay of 0.8
+Epochs: 10. Batch Size: 25
+Both models are trained 20 times, with the averages as final results.
+
+Best : Base_0.8Exp_lr
+
+Rank  Name              Class-Score       Overall-Score
+1     Base_0.8Exp_lr    0.30139           0.33333
+2     Base_lr           0.28889           0.33333
+
