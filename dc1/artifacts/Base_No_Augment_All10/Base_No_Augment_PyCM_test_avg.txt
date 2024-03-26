@@ -1,4 +1,4 @@
-Results Base_No_Augment, as an average from 10 different trainings
+Results Base_No_Augment (Base model, 10 Epochs, 25 Batch Size, No Augment), as an average from 10 different trainings
 Average cross entropy loss: 1.7271746397018433
 Average Cohen's Kappa: 0.10421562129119559
 Average Matthew's correlation coefficient: 0.11091115883930318
@@ -18,12 +18,7 @@ Actual
 
 5         115       98        149       53        22        37        
 
-
-
-
-
-Overall Statistics : 
-
+Overall Statistics :
 95% CI                                                            (0.23908,0.27111)
 ACC Macro                                                         0.7517
 ARI                                                               0.02104
@@ -164,3 +159,12 @@ sInd(Similarity index)                                            0.59668       
 Imbalanced dataset?: False
 Binary classification?: False
 Recommended metrics: ['ERR', 'TPR Micro', 'TPR Macro', 'F1 Macro', 'PPV Macro', 'NPV Macro', 'ACC', 'Overall ACC', 'MCC', 'MCCI', 'Overall MCC', 'SOA6(Matthews)', 'BCD', 'Hamming Loss', 'Zero-one Loss']
+
+np.array([
+        [243, 73, 74, 57, 19, 8],
+        [159, 165, 97, 30, 13, 10],
+        [141, 101, 129, 64, 26, 15],
+        [141, 59, 124, 100, 38, 12],
+        [147, 39, 114, 110, 52, 12],
+        [115, 98, 149, 53, 22, 37]
+    ])

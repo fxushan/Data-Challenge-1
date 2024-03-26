@@ -291,26 +291,14 @@ if __name__ == "__main__":
         type=bool,
     )
     args = parser.parse_args()
-    artifact_path_name_1 = "New_E10_BS25"
+    artifact_path_name_1 = "Base_No_Aug"
     pycm_avg_1 = (
-        run_main_x_times(20, artifact_path_name_1, "X_train.npy", "Y_train.npy", False, args))
+        run_main_x_times(20, artifact_path_name_1, "X_train.npy", "Y_train.npy", True, args))
 
     # Test run
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--nb_epochs", help="number of training iterations", default=34, type=int
-    )
-    parser.add_argument("--batch_size", help="batch_size", default=10, type=int)
-    parser.add_argument(
-        "--balanced_batches",
-        help="whether to balance batches for class labels",
-        default=True,
-        type=bool,
-    )
-    args = parser.parse_args()
-    artifact_path_name_2 = "New_E34_BS10"
+    artifact_path_name_2 = "Base_tensorflow_aug"
     pycm_avg_2 = (
-        run_main_x_times(20, artifact_path_name_2, "X_train.npy", "Y_train.npy", False, args))
+        run_main_x_times(20, artifact_path_name_2, "X_tf.npy", "Y_tf.npy", True, args))
 
 
     total_1 = sum(sum(inner_dict.values()) for inner_dict in pycm_avg_1.values())
@@ -323,55 +311,11 @@ if __name__ == "__main__":
     compare = Compare({f'{artifact_path_name_1}': pycm_avg_1, f'{artifact_path_name_2}': pycm_avg_2})
 
     with open(Path("artifacts") / f"Comparisons/{artifact_path_name_1} vs {artifact_path_name_2}.txt", "a") as f:
-        print(f'Comparison of PyCM confusion matrices of the new model with 10 epochs and 25 batch size vs. new model with 34 epochs and 10 batch size', file=f)
+        print(f'Comparison of PyCM confusion matrices of the base model (no augmentation) vs base model (tensorflow augmentation)', file=f)
+        print(f'Epochs: 10. Batch Size: 25', file=f)
         print(f'Both models are trained 20 times, with the averages as final results.', file=f)
         print(f'', file=f)
 
         sys.stdout = f  # Redirect standard output to the file
         print(f'{compare}', file=f)
         sys.stdout = sys.__stdout__  # Reset standard output to the console
-
-
-
-
-    # # Base run
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     "--nb_epochs", help="number of training iterations", default=10, type=int
-    # )
-    # parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
-    # parser.add_argument(
-    #     "--balanced_batches",
-    #     help="whether to balance batches for class labels",
-    #     default=True,
-    #     type=bool,
-    # )
-    # args = parser.parse_args()
-    # artifact_path_name_1 = "Base_No_Aug"
-    # pycm_avg_1 = (
-    #     run_main_x_times(20, artifact_path_name_1, "X_train.npy", "Y_train.npy", True, args))
-    #
-    # # Test run
-    # artifact_path_name_2 = "Base_tensorflow_aug"
-    # pycm_avg_2 = (
-    #     run_main_x_times(20, artifact_path_name_2, "X_tensor.npy", "Y_tensor.npy", True, args))
-    #
-    #
-    # total_1 = sum(sum(inner_dict.values()) for inner_dict in pycm_avg_1.values())
-    # total_2 = sum(sum(inner_dict.values()) for inner_dict in pycm_avg_2.values())
-    # difference = total_1 - total_2
-    # pycm_avg_2['0']['0'] += difference
-    #
-    # pycm_avg_1 = ConfusionMatrix(matrix=pycm_avg_1)
-    # pycm_avg_2 = ConfusionMatrix(matrix=pycm_avg_2)
-    # compare = Compare({f'{artifact_path_name_1}': pycm_avg_1, f'{artifact_path_name_2}': pycm_avg_2})
-    #
-    # with open(Path("artifacts") / f"Comparisons/{artifact_path_name_1} vs {artifact_path_name_2}.txt", "a") as f:
-    #     print(f'Comparison of PyCM confusion matrices of the base model (no augmentation) vs base model (tensorflow augmentation)', file=f)
-    #     print(f'Epochs: 10. Batch Size: 25', file=f)
-    #     print(f'Both models are trained 20 times, with the averages as final results.', file=f)
-    #     print(f'', file=f)
-    #
-    #     sys.stdout = f  # Redirect standard output to the file
-    #     print(f'{compare}', file=f)
-    #     sys.stdout = sys.__stdout__  # Reset standard output to the console

@@ -1,0 +1,8 @@
+Comparison of PyCM confusion matrices of the new model vs. base model, both with 10 epochs and 25 batch size
+Both models are trained 20 and 10 times respectively, with the averages as final results.
+
+Best : None
+
+Rank  Name             Class-Score       Overall-Score
+1     Base_E10_BS25    0.28889           0.47619
+1     New_E10_BS25     0.28889           0.47619

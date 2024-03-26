@@ -1,4 +1,4 @@
-Results Base_imaug_Augment, as an average from 10 different trainings
+Results Base_imaug_Augment (Base model, 10 Epochs, 25 Batch Size, imgaug augmentation dataset), as an average from 10 different trainings
 Average cross entropy loss: 1.7267227172851562
 Average Cohen's Kappa: 0.10784047153583642
 Average Matthew's correlation coefficient: 0.1147882972387094
