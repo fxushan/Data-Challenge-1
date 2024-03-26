@@ -69,7 +69,7 @@ model.initialize()
 print(model.device)
 
 # param_grid = {
-#     'batch_size': [10, 20, 40, 60, 80, 100],
+#     'batch_size': [10, 20, 40, 60, 80, 100],a
 #     'max_epochs': [10, 50, 100],
 #     # 'optimizer': [optim.SGD, optim.RMSprop, optim.Adagrad, optim.Adadelta,
 #     #               optim.Adam, optim.Adamax, optim.NAdam],
