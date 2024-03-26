@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import List
+import torch.nn.functional as F
 
 # Other imports
 import matplotlib.pyplot as plt  # type: ignore
@@ -43,11 +44,13 @@ def test_accuracy(net, device="cpu"):
             images, labels = data
             images, labels = images.to(device), labels.to(device)
             outputs = net(images)
+            probabilities = F.softmax(outputs, dim=1)  # Apply softmax to convert outputs to probabilities
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
             true_labels.extend(labels.cpu().numpy())
             predicted_labels.extend(predicted.cpu().numpy())
+            print(probabilities.cpu().numpy())  # Print the softmax probabilities
     return (correct / total, true_labels, predicted_labels)
 
 def perf_measure(y_actual, y_hat):
