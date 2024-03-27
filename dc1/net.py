@@ -1,6 +1,21 @@
-
 import torch
 import torch.nn as nn
+
+import random
+
+class StochasticDepth(nn.Module):
+    def __init__(self, drop_prob: float = 0.5):
+        super(StochasticDepth, self).__init__()
+        self.drop_prob = drop_prob
+
+    def forward(self, x):
+        if not self.training:
+            return x
+
+        if random.random() < self.drop_prob:
+            return x
+
+        return torch.zeros_like(x)
 
 
 class Net(nn.Module):
@@ -12,33 +27,42 @@ class Net(nn.Module):
                  p1=0.01, p2=0.21959590088564337, p3=0.26732333432484356) -> None:
         super(Net, self).__init__()
         self.cnn_layers = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=4, stride=1),
+            nn.Conv2d(1, 64, kernel_size=3, padding='same'),
             nn.BatchNorm2d(64),
             nn.ELU(alpha=alpha_1),
             nn.MaxPool2d(kernel_size=4),
-            nn.Dropout(p=p1),
-            nn.Conv2d(64, 32, kernel_size=4, stride=1),
-            nn.BatchNorm2d(32),
+            nn.Dropout(p=0.5),
+
+            nn.Conv2d(64, 128, kernel_size=3, padding='same'),
+            nn.BatchNorm2d(128),
             nn.ELU(alpha=alpha_2),
-            nn.MaxPool2d(kernel_size=3),
-            nn.Dropout(p=p2),
-            nn.Conv2d(32, 16, kernel_size=4, stride=1),
-            nn.BatchNorm2d(16),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Dropout(p=0.25),
+
+            nn.Conv2d(128, 256, kernel_size=3, padding='same'),
+            nn.BatchNorm2d(256),
             nn.ELU(alpha=alpha_3),
             nn.MaxPool2d(kernel_size=2),
-            nn.Dropout(p=p3),
-            # nn.BatchNorm2d(16),
-            # nn.ELU(alpha=alpha_4),
-            # nn.MaxPool2d(kernel_size=1),
-            # nn.Dropout(p=p4),
+            nn.Dropout(p=0.125),
         )
+
+        # Calculate the size of the output from convolutional layers
+        self.flatten_size = self._get_flatten_size()
+
         self.linear_layers = nn.Sequential(
-            nn.Linear(144, 256),
-            nn.Linear(256, n_classes)
+            nn.Linear(self.flatten_size, 512),  # Adjusted input size
+            nn.ReLU(inplace=True),
+            nn.Linear(512, n_classes)
         )
 
+    def _get_flatten_size(self):
+        # Define a dummy input tensor to calculate the output size of the convolutional layers
+        input_tensor = torch.randn(1, 1, 128, 128)
+        with torch.no_grad():
+            features = self.cnn_layers(input_tensor)
+        # Calculate the total number of features after flattening
+        return features.view(1, -1).size(1)
 
-    # Defining the forward pass
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if x.shape[1] == 1:
             x = x
@@ -46,9 +70,6 @@ class Net(nn.Module):
             x = x.permute(0, 3, 1, 2)
 
         x = self.cnn_layers(x)
-        # After our convolutional layers which are 2D, we need to flatten our
-        # input to be 1 dimensional, as the linear layers require this.
         x = x.reshape(x.size(0), -1)
-
         x = self.linear_layers(x)
         return x

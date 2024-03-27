@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import List
+import torch.nn.functional as F
 
 # Other imports
 import matplotlib.pyplot as plt  # type: ignore
@@ -19,6 +20,7 @@ import torch.optim as optim
 from matplotlib.pyplot import figure
 from torchsummary import summary  # type: ignore
 import numpy as np
+import pandas as pd
 
 from dc1.batch_sampler import BatchSampler
 from dc1.image_dataset import ImageDataset
@@ -38,17 +40,23 @@ def test_accuracy(net, device="cpu"):
     total = 0
     true_labels = []
     predicted_labels = []
+    softmax_probabilities = [[] for _ in range(6)]  # List to store softmax probabilities for each label
     with torch.no_grad():
         for data in testloader:
             images, labels = data
             images, labels = images.to(device), labels.to(device)
             outputs = net(images)
+            probabilities = F.softmax(outputs, dim=1)  # Apply softmax to convert outputs to probabilities
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
             true_labels.extend(labels.cpu().numpy())
             predicted_labels.extend(predicted.cpu().numpy())
-    return (correct / total, true_labels, predicted_labels)
+            for i in range(6):
+                class_probs = probabilities[:, i].cpu().numpy()  # Get softmax probabilities for the current class
+                softmax_probabilities[i].extend(class_probs)
+    accuracy = correct / total
+    return (accuracy, true_labels, predicted_labels, softmax_probabilities)
 
 def perf_measure(y_actual, y_hat):
     TP = 0
@@ -82,6 +90,17 @@ def calculate_additional_metrics(y_true, y_pred):
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
     print(f"F2 Score: {f2_score:.4f}")
+
+def plot_uncertainty_distribution(softmax_probabilities, labels):
+    num_classes = len(softmax_probabilities)
+    for i in range(num_classes):
+        class_probs = softmax_probabilities[i]
+        plt.hist(class_probs, bins=20, alpha=0.5, label=f"Class {labels[i]}")
+    plt.xlabel('Softmax Probability')
+    plt.ylabel('Frequency')
+    plt.title('Uncertainty Distribution for Each Class')
+    plt.legend()
+    plt.show()
 
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Load the train and test data set
@@ -202,8 +221,40 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
             #
             # plotext.show()
 
-    accuracy, true_labels, predicted_labels = test_accuracy(model, device)
+    accuracy, true_labels, predicted_labels, softmax_probabilities = test_accuracy(model, device)
     print(f'Test Accuracy: {accuracy * 100:.2f}%')
+
+    # Plot uncertainty distribution
+    #plot_uncertainty_distribution(softmax_probabilities, labels=[0, 1, 2, 3, 4, 5])
+    softmax_scores = np.array(softmax_probabilities)
+    print(softmax_scores.shape)
+
+    labels = ["Pneumothorax", "Nodule", "No Finding", "Infiltration", "Effusion", "Atelectasis"]
+
+    # Assuming softmax_scores is your array (shape: 6x8420)
+    # Create a DataFrame with "score" and "label" columns
+    softmax_df = pd.DataFrame(columns=["score", "label"])
+
+    for i, label in enumerate(labels):
+        scores_for_label = softmax_scores[i]
+        label_column = [label] * len(scores_for_label)
+        label_df = pd.DataFrame({"score": scores_for_label, "label": label_column})
+        softmax_df = pd.concat([softmax_df, label_df])
+
+    # Plot using Seaborn's kdeplot
+    sns.kdeplot(data=softmax_df, x="score", hue="label", palette="Set2", fill=True, common_norm=False,
+                alpha=0.3, linewidth=1, bw_adjust=2, cut=0)
+
+    # Add labels and title
+    plt.xlabel("Score")
+    plt.ylabel("Density")
+    plt.title("Distribution of Softmax Scores for Each Label")
+
+    # Show the legend
+    plt.legend(labels=labels)
+
+    # Display the plot
+    plt.show()
 
     # Calculate AUC-ROC score
     y_one_hot = label_binarize(true_labels, classes=[0, 1, 2, 3, 4, 5])
@@ -215,6 +266,7 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     print(f'TP={TP} FP={FP} TN={TN} FN={FN}')
 
     # heatmap_plot(true_labels, predicted_labels)
+
 
     # retrieve current time to label artifacts
     now = datetime.now()
@@ -234,10 +286,8 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     fig.legend()
     fig.suptitle('Cross Entropy loss over epochs')
 
-    #Accuracy
 
-    accuracy, true_labels, predicted_labels = test_accuracy(model, device)
-    print(f'Test Accuracy: {accuracy*100:.2f}%')
+
 
     #Precision, Recall and F2 score
 
@@ -303,7 +353,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--nb_epochs", help="number of training iterations", default=34, type=int
+        "--nb_epochs", help="number of training iterations", default=1, type=int
     )
     parser.add_argument("--batch_size", help="batch_size", default=10, type=int)
     parser.add_argument(
