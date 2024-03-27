@@ -13,6 +13,7 @@ import torch
 from skopt import BayesSearchCV
 from skopt.space import Integer, Real
 from skorch import NeuralNetClassifier
+from torch import optim
 from torchsummary import summary  # type: ignore
 
 from dc1.image_dataset import ImageDataset
@@ -64,9 +65,16 @@ y_sample = np.asarray(y_sample)
 # Load the Neural Net. NOTE: set number of distinct labels here
 model = NeuralNetClassifier(module=Net,
                             module__n_classes=6,
-                            device=device)
+                            device=device,
+                            optimizer=optim.SGD,
+                            optimizer__lr=0.001,
+                            lr=0.001,
+                            batch_size=25,
+                            max_epochs=34,
+                            optimizer__momentum=0.1)
 model.initialize()
 print(model.device)
+print(model.get_params())
 
 # param_grid = {
 #     'batch_size': [10, 20, 40, 60, 80, 100],
@@ -90,9 +98,12 @@ optimizer_kwargs = {'acq_func_kwargs': {"xi": 10, "kappa": 10}}
 # space = {'module__slope_1': Real(0.001, 1),
 #          'module__slope_2': Real(0.001, 1),
 #          'module__slope_3': Real(0.001, 1)}
-space = {'module__alpha_1': Real(0.01, 2),
-         'module__alpha_2': Real(0.01, 2),
-         'module__alpha_3': Real(0.01, 2)}
+# space = {'module__alpha_1': Real(0.01, 2),
+#          'module__alpha_2': Real(0.01, 2),
+#          'module__alpha_3': Real(0.01, 2)}
+space = {'module__p1': Real(0.01, 1),
+         'module__p2': Real(0.01, 1),
+         'module__p3': Real(0.01, 1)}
 bsearch = BayesSearchCV(estimator=model,
                         search_spaces=space, scoring='neg_mean_absolute_error', n_jobs=2, n_iter=42, cv=3,
                         optimizer_kwargs=optimizer_kwargs)

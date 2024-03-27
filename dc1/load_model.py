@@ -9,11 +9,11 @@ from dc1.net import Net
 
 train_dataset = ImageDataset(Path("data/X_train.npy"), Path("data/Y_train.npy"))
 model = Net(n_classes=6)
-model.load_state_dict(torch.load(Path("../dc1/model_weights/model_03_20_14_11.pth")))
+model.load_state_dict(torch.load(Path("../dc1/model_weights/model_03_25_17_28_34epoch_25bs.pth")))
 model.eval()
 target_layers = [model.cnn_layers[-1]]
 cam = HiResCAM(model, target_layers)
-input_tensor = torch.from_numpy(train_dataset.imgs[0] / 255).float()
+input_tensor = torch.from_numpy(train_dataset.imgs[5] / 255).float()
 input_tensor = input_tensor.unsqueeze(0)
 
 grayscale_cam = cam(input_tensor=input_tensor)
