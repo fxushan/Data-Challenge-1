@@ -91,16 +91,6 @@ def calculate_additional_metrics(y_true, y_pred):
     print(f"Recall: {recall:.4f}")
     print(f"F2 Score: {f2_score:.4f}")
 
-def plot_uncertainty_distribution(softmax_probabilities, labels):
-    num_classes = len(softmax_probabilities)
-    for i in range(num_classes):
-        class_probs = softmax_probabilities[i]
-        plt.hist(class_probs, bins=20, alpha=0.5, label=f"Class {labels[i]}")
-    plt.xlabel('Softmax Probability')
-    plt.ylabel('Frequency')
-    plt.title('Uncertainty Distribution for Each Class')
-    plt.legend()
-    plt.show()
 
 def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     # Load the train and test data set
@@ -225,7 +215,6 @@ def main(args: argparse.Namespace, activeloop: bool = True) -> None:
     print(f'Test Accuracy: {accuracy * 100:.2f}%')
 
     # Plot uncertainty distribution
-    #plot_uncertainty_distribution(softmax_probabilities, labels=[0, 1, 2, 3, 4, 5])
     softmax_scores = np.array(softmax_probabilities)
     print(softmax_scores.shape)
 
