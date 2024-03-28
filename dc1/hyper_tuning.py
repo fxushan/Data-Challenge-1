@@ -104,8 +104,14 @@ optimizer_kwargs = {'acq_func_kwargs': {"xi": 10, "kappa": 10}}
 space = {'module__p1': Real(0.01, 1),
          'module__p2': Real(0.01, 1),
          'module__p3': Real(0.01, 1)}
+# space = {'module__cov_kernel1': Integer(1, 5),
+#          'module__cov_kernel2': Integer(1, 5),
+#          'module__cov_kernel3': Integer(1, 5)}
+# space = {'module__pool_kernel1': Integer(1, 5),
+#          'module__pool_kernel2': Integer(1, 5),
+#          'module__pool_kernel3': Integer(1, 5)}
 bsearch = BayesSearchCV(estimator=model,
-                        search_spaces=space, scoring='neg_mean_absolute_error', n_jobs=2, n_iter=42, cv=3,
+                        search_spaces=space, scoring='balanced_accuracy', n_jobs=2, n_iter=42, cv=3,
                         optimizer_kwargs=optimizer_kwargs)
 bayes_result = bsearch.fit(X_sample, y_sample)
 print("Best: %f using %s" % (bayes_result.best_score_, bayes_result.best_params_))
