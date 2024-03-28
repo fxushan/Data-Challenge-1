@@ -41,7 +41,24 @@ def load_data(X_train_set, Y_train_set):
     validation_dataset = ImageDataset(X_val, y_val)
     return train_dataset, test_dataset, validation_dataset
 
-def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.Namespace, activeloop: bool = True) -> None:
+class CustomLR:
+    def __init__(self, optimizer, decay_rate, stop_epoch):
+        self.optimizer = optimizer
+        self.decay_rate = decay_rate
+        self.stop_epoch = stop_epoch
+
+    def step(self, epoch):
+        if epoch < self.stop_epoch:
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] *= self.decay_rate
+
+def checkpoint(model, filename):
+    torch.save(model.state_dict(), filename)
+
+def resume(model, filename):
+    model.load_state_dict(torch.load(filename))
+
+def run_main_base(artifact_path_name, X_train_set, Y_train_set, lr_decay, args: argparse.Namespace, activeloop: bool = True) -> None:
     # Load the train, validation and test data set
     train_dataset, test_dataset, validation_dataset = load_data(X_train_set, Y_train_set)
 
@@ -49,7 +66,12 @@ def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.N
     model = Net(n_classes=6)
 
     # Initialize optimizer(s) and loss function(s)
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.1)
+    if lr_decay is True:
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+        # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=args.gamma)
+        scheduler = CustomLR(optimizer, decay_rate=args.gamma, stop_epoch=args.stop_decay)
+    else:
+        optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.1)
     loss_function = nn.CrossEntropyLoss()
 
     # fetch epoch and batch count from arguments
@@ -100,10 +122,12 @@ def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.N
     mean_kappas_validation = []
     mean_mcc_train = []
     mean_mcc_validation = []
+    best_loss = -1
 
     for e in range(n_epochs):
         if activeloop:
             print(f'Epoch {e}...')
+            print(f'Learning rate: {optimizer.param_groups[0]["lr"]}')
             # Training:
             losses, kappas, mcc_list, conf_matrix_total_train, cm_total = train_model(model, train_sampler, optimizer,
                                                                             loss_function, device)
@@ -127,12 +151,12 @@ def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.N
             mean_mcc_train.append(mean_mcc)
 
             # Validation:
-            losses, kappas, mcc_list, conf_matrix_total_validation, cm_total = validation_model(model, validation_sampler, loss_function, device)
+            losses_val, kappas, mcc_list, conf_matrix_total_validation, cm_total = validation_model(model, validation_sampler, loss_function, device)
 
             # Calculating and printing statistics:
             # Cross entropy loss
-            mean_loss = sum(losses) / len(losses)
-            mean_losses_validation.append(mean_loss)
+            mean_loss_val = sum(losses_val) / len(losses_val)
+            mean_losses_validation.append(mean_loss_val)
 
             # # Confusion matrix
             # print(conf_matrix_total_validation)
@@ -146,6 +170,20 @@ def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.N
             # Average MCC over all batches
             mean_mcc = sum(mcc_list) / len(mcc_list)
             mean_mcc_validation.append(mean_mcc)
+
+            # Saving best model & Early stopping
+            print(f'Mean loss: {mean_loss_val}')
+            if mean_loss_val < best_loss:
+                best_loss = mean_loss_val
+                best_model_epoch = e
+                print(f'New best loss!: {best_loss}')
+                torch.save(model.state_dict(), f"model_weights/best_{artifact_path_name}.pth")
+
+            # Learning rate decay step
+            if lr_decay is True:
+                scheduler.step(e)
+            else:
+                continue
 
     # retrieve current time to label artifacts
     now = datetime.now()
@@ -196,6 +234,8 @@ def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.N
         print(f'Binary classification?: {cm_total.binary}', file=f)
         print(f'Recommended metrics: {cm_total.recommended_list}', file=f)
 
+        print(f'{cm_total.to_array()}', file=f)
+
     # Create plot of heatmaps of final confusion matrix
     fig, axs = plt.subplots(figsize=(10, 10))
     labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
@@ -205,6 +245,47 @@ def run_main_base(artifact_path_name, X_train_set, Y_train_set, args: argparse.N
     plt.title('Final heatmap for test data')
     plt.savefig(
         Path("artifacts") / f"{result_plotting_path}_ConfusionMatrix_test.png")
+
+
+    # Early stopping model test
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = Net(n_classes=6)
+    model.load_state_dict(torch.load(f"model_weights/best_{artifact_path_name}.pth"))
+    model.to(device)
+
+    losses_best, kappas_best, mcc_list_best, conf_matrix_total_test_best, cm_total_best = test_model(model,
+                                                                                                     test_sampler,
+                                                                                                     loss_function,
+                                                                                                     device)
+    mean_loss_test_best = sum(losses_best) / len(losses_best)
+    mean_kappa_test_best = sum(kappas_best) / len(kappas_best)
+    mean_mcc_test_best = sum(mcc_list_best) / len(mcc_list_best)
+
+    with open(Path("artifacts") / f"{result_plotting_path}_e{best_model_epoch}_PyCM_test.txt", "a") as f:
+        print(f'Mean cross entropy loss: {mean_loss_test_best}', file=f)
+        print(f"Mean Cohen's Kappa: {mean_kappa_test_best}", file=f)
+        print(f"Mean Matthew's correlation coefficient: {mean_mcc_test_best}", file=f)
+        print(f"\n", file=f)
+
+        sys.stdout = f  # Redirect standard output to the file
+        print(f'{cm_total_best}', file=f)
+        sys.stdout = sys.__stdout__  # Reset standard output to the console
+
+        print(f'Imbalanced dataset?: {cm_total_best.imbalance}', file=f)
+        print(f'Binary classification?: {cm_total_best.binary}', file=f)
+        print(f'Recommended metrics: {cm_total_best.recommended_list}\n', file=f)
+
+        print(f'{cm_total_best.to_array()}', file=f)
+
+    # Create plot of heatmaps of final confusion matrix
+    fig, axs = plt.subplots(figsize=(10, 10))
+    labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
+    sns.heatmap(conf_matrix_total_test_best, annot=True, fmt='d', xticklabels=labels, yticklabels=labels, ax=axs)
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.title('Final heatmap for test data')
+    plt.savefig(
+        Path("artifacts") / f"{result_plotting_path}_e{best_model_epoch}_ConfusionMatrix_test.png")
 
     return conf_matrix_total_test, mean_loss_test, mean_kappa_test, mean_mcc_test
 

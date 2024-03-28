@@ -112,6 +112,13 @@ def main(artifact_path_name, X_train_set, Y_train_set, lr_decay, args: argparse.
     mean_mcc_validation = []
     best_loss = 100
 
+    # check if model_weights/ subdir exists
+    if not Path("model_weights/").exists():
+        os.mkdir(Path("model_weights/"))
+    # Check if /artifacts/ subdir exists
+    if not Path("artifacts/").exists():
+        os.mkdir(Path("artifacts/"))
+
     for e in range(n_epochs):
         if activeloop:
             print(f'Epoch {e}...')
@@ -161,13 +168,17 @@ def main(artifact_path_name, X_train_set, Y_train_set, lr_decay, args: argparse.
             mean_mcc = sum(mcc_list) / len(mcc_list)
             mean_mcc_validation.append(mean_mcc)
 
-            # Saving best model & Early stopping
             print(f'Mean loss: {mean_loss_val}')
+            # Saving best model & Early stopping
             if mean_loss_val < best_loss:
                 best_loss = mean_loss_val
                 best_model_epoch = e
                 print(f'New best loss!: {best_loss}')
                 torch.save(model.state_dict(), f"model_weights/best_{artifact_path_name}.pth")
+            elif e - best_model_epoch > args.early_stop_thresh:
+                print(f'Early stopped training at epoch {e}')
+                n_epochs = e
+                break  # terminate the training loop
 
             # Learning rate decay step
             if lr_decay is True:
@@ -175,22 +186,10 @@ def main(artifact_path_name, X_train_set, Y_train_set, lr_decay, args: argparse.
             else:
                 continue
 
-    # retrieve current time to label artifacts
-    now = datetime.now()
-    # check if model_weights/ subdir exists
-    if not Path("model_weights/").exists():
-        os.mkdir(Path("model_weights/"))
-    # Check if /artifacts/ subdir exists
-    if not Path("artifacts/").exists():
-        os.mkdir(Path("artifacts/"))
-
     # Make directory & path for saving plots on testing data
     if not Path(f"artifacts/{artifact_path_name}/").exists():
         os.mkdir(Path(f"artifacts/{artifact_path_name}/"))
     result_plotting_path: str = f"{artifact_path_name}/{artifact_path_name}"
-
-    # # Saving the model
-    # torch.save(model.state_dict(), f"model_weights/model_{now.month:02}_{now.day:02}_{now.hour}_{now.minute:02}.txt")
 
     # Create and save all plots for training and validation datasets
     plot_cross_entropy_losses(n_epochs, mean_losses_train, mean_losses_validation, result_plotting_path)
@@ -198,56 +197,19 @@ def main(artifact_path_name, X_train_set, Y_train_set, lr_decay, args: argparse.
     plot_MCC(n_epochs, mean_mcc_train, mean_mcc_validation, result_plotting_path)
     plot_heatmaps(conf_matrix_total_train, conf_matrix_total_validation, result_plotting_path)
 
-    # Plots for testing dataset:
-    losses, kappas, mcc_list, conf_matrix_total_test, cm_total = test_model(model, test_sampler, loss_function, device)
-    # Cross Entropy Loss
-    mean_loss_test = sum(losses) / len(losses)
-    # Cohen's Kappa
-    mean_kappa_test = sum(kappas) / len(kappas)
-    # Matthew's correlation coefficient
-    mean_mcc_test = sum(mcc_list) / len(mcc_list)
-
-    # print(cm_total.stat(summary=True))
-
-    # Save text file with confusion matrix (PyCM library) and all their metrics
-    with open(Path("artifacts") / f"{result_plotting_path}_PyCM_test.txt", "a") as f:
-        print(f'Mean cross entropy loss: {mean_loss_test}', file=f)
-        print(f"Mean Cohen's Kappa: {mean_kappa_test}", file=f)
-        print(f"Mean Matthew's correlation coefficient: {mean_mcc_test}", file=f)
-        print(f"\n", file=f)
-
-        sys.stdout = f  # Redirect standard output to the file
-        print(f'{cm_total}', file=f)
-        sys.stdout = sys.__stdout__  # Reset standard output to the console
-
-        print(f'Imbalanced dataset?: {cm_total.imbalance}', file=f)
-        print(f'Binary classification?: {cm_total.binary}', file=f)
-        print(f'Recommended metrics: {cm_total.recommended_list}\n', file=f)
-
-        print(f'{cm_total.to_array()}', file=f)
-
-    # Create plot of heatmaps of final confusion matrix
-    fig, axs = plt.subplots(figsize=(10, 10))
-    labels = ['Etalactasis', 'Effusion', 'Infiltration', 'No Finding', 'Module', 'Pneumothorax']
-    sns.heatmap(conf_matrix_total_test, annot=True, fmt='d', xticklabels=labels, yticklabels=labels, ax=axs)
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.title('Final heatmap for test data')
-    plt.savefig(
-        Path("artifacts") / f"{result_plotting_path}_ConfusionMatrix_test.png")
-
-
-    # Early stopping model test
+    # Early stopping model test | Load best model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = Net(n_classes=6)
     model.load_state_dict(torch.load(f"model_weights/best_{artifact_path_name}.pth"))
     model.to(device)
 
+    # Testing | Plots
     losses_best, kappas_best, mcc_list_best, conf_matrix_total_test_best, cm_total_best = test_model(model, test_sampler, loss_function, device)
     mean_loss_test_best = sum(losses_best) / len(losses_best)
     mean_kappa_test_best = sum(kappas_best) / len(kappas_best)
     mean_mcc_test_best = sum(mcc_list_best) / len(mcc_list_best)
 
+    # Save metrics
     with open(Path("artifacts") / f"{result_plotting_path}_e{best_model_epoch}_PyCM_test.txt", "a") as f:
         print(f'Mean cross entropy loss: {mean_loss_test_best}', file=f)
         print(f"Mean Cohen's Kappa: {mean_kappa_test_best}", file=f)
@@ -274,7 +236,7 @@ def main(artifact_path_name, X_train_set, Y_train_set, lr_decay, args: argparse.
     plt.savefig(
         Path("artifacts") / f"{result_plotting_path}_e{best_model_epoch}_ConfusionMatrix_test.png")
 
-    return conf_matrix_total_test, mean_loss_test, mean_kappa_test, mean_mcc_test
+    return conf_matrix_total_test_best, mean_loss_test_best, mean_kappa_test_best, mean_mcc_test_best
 
 
 # noinspection PyTupleAssignmentBalance
@@ -357,56 +319,57 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
     parser.add_argument("--balanced_batches", help="whether to balance batches for class labels", default=True, type=bool)
     parser.add_argument("--lr", help="initial learning rate for the optimizer", default=0.1, type=int)
+    parser.add_argument("--momentum", help="momentum for the optimizer", default=0.75, type=float)
+    parser.add_argument("--gamma", help="decay rate for the learning rate scheduler", default=0.9, type=float)
+    parser.add_argument("--stop_decay", help="epoch to stop LR decay at", default=40, type=float)
+    parser.add_argument("--early_stop_thresh", help="amount of epochs in a row with higher loss to stop early", default=6, type=float)
+    args = parser.parse_args()
+    artifact_path_name_1 = "New_lr0.1_m0.75_g0.9_e50_sd40_es6"
+    pycm_avg_1 = (
+        run_main_x_times(x=10, artifact_path_name=artifact_path_name_1, X_train_set="X_train.npy", Y_train_set="Y_train.npy",
+                         lr_decay=True, base=False, args=args))
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--nb_epochs", help="number of training iterations", default=50, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
+    parser.add_argument("--balanced_batches", help="whether to balance batches for class labels", default=True, type=bool)
+    parser.add_argument("--lr", help="initial learning rate for the optimizer", default=0.12, type=int)
     parser.add_argument("--momentum", help="momentum for the optimizer", default=0.5, type=float)
     parser.add_argument("--gamma", help="decay rate for the learning rate scheduler", default=0.9, type=float)
     parser.add_argument("--stop_decay", help="epoch to stop LR decay at", default=40, type=float)
+    parser.add_argument("--early_stop_thresh", help="amount of epochs in a row with higher loss to stop early", default=6, type=float)
     args = parser.parse_args()
-    artifact_path_name_1 = "New_lr0.1_m0.5_g0.9_e50_s40"
-    pycm_avg_1 = (
-        run_main_x_times(x=5, artifact_path_name=artifact_path_name_1, X_train_set="X_train.npy", Y_train_set="Y_train.npy",
+    artifact_path_name_2 = "New_lr0.12_m0.5_g0.9_e50_sd40_es6"
+    pycm_avg_2 = (
+        run_main_x_times(x=10, artifact_path_name=artifact_path_name_2, X_train_set="X_train.npy", Y_train_set="Y_train.npy",
                          lr_decay=True, base=False, args=args))
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--nb_epochs", help="number of training iterations", default=50, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
+    parser.add_argument("--balanced_batches", help="whether to balance batches for class labels", default=True, type=bool)
+    parser.add_argument("--lr", help="initial learning rate for the optimizer", default=0.12, type=int)
+    parser.add_argument("--momentum", help="momentum for the optimizer", default=0.5, type=float)
+    parser.add_argument("--gamma", help="decay rate for the learning rate scheduler", default=0.85, type=float)
+    parser.add_argument("--stop_decay", help="epoch to stop LR decay at", default=40, type=float)
+    parser.add_argument("--early_stop_thresh", help="amount of epochs in a row with higher loss to stop early", default=6, type=float)
+    args = parser.parse_args()
+    artifact_path_name_3 = "New_lr0.12_m0.5_g0.85_e50_sd40_es6"
+    pycm_avg_3 = (
+        run_main_x_times(x=10, artifact_path_name=artifact_path_name_3, X_train_set="X_train.npy", Y_train_set="Y_train.npy",
+                         lr_decay=True, base=False, args=args))
 
-
-
-    # # Base run
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     "--nb_epochs", help="number of training iterations", default=10, type=int
-    # )
-    # parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
-    # parser.add_argument(
-    #     "--balanced_batches",
-    #     help="whether to balance batches for class labels",
-    #     default=True,
-    #     type=bool,
-    # )
-    # args = parser.parse_args()
-    # artifact_path_name_1 = "Base_No_Aug"
-    # pycm_avg_1 = (
-    #     run_main_x_times(20, artifact_path_name_1, "X_train.npy", "Y_train.npy", True, args))
-    #
-    # # Test run
-    # artifact_path_name_2 = "Base_tensorflow_aug"
-    # pycm_avg_2 = (
-    #     run_main_x_times(20, artifact_path_name_2, "X_tf.npy", "Y_tf.npy", True, args))
-    #
-    #
-    # total_1 = sum(sum(inner_dict.values()) for inner_dict in pycm_avg_1.values())
-    # total_2 = sum(sum(inner_dict.values()) for inner_dict in pycm_avg_2.values())
-    # difference = total_1 - total_2
-    # pycm_avg_2['0']['0'] += difference
-    #
-    # pycm_avg_1 = ConfusionMatrix(matrix=pycm_avg_1)
-    # pycm_avg_2 = ConfusionMatrix(matrix=pycm_avg_2)
-    # compare = Compare({f'{artifact_path_name_1}': pycm_avg_1, f'{artifact_path_name_2}': pycm_avg_2})
-    #
-    # with open(Path("artifacts") / f"Comparisons/{artifact_path_name_1} vs {artifact_path_name_2}.txt", "a") as f:
-    #     print(f'Comparison of PyCM confusion matrices of the base model (no augmentation) vs base model (tensorflow augmentation)', file=f)
-    #     print(f'Epochs: 10. Batch Size: 25', file=f)
-    #     print(f'Both models are trained 20 times, with the averages as final results.', file=f)
-    #     print(f'', file=f)
-    #
-    #     sys.stdout = f  # Redirect standard output to the file
-    #     print(f'{compare}', file=f)
-    #     sys.stdout = sys.__stdout__  # Reset standard output to the console
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--nb_epochs", help="number of training iterations", default=50, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=25, type=int)
+    parser.add_argument("--balanced_batches", help="whether to balance batches for class labels", default=True, type=bool)
+    parser.add_argument("--lr", help="initial learning rate for the optimizer", default=0.1, type=int)
+    parser.add_argument("--momentum", help="momentum for the optimizer", default=0.5, type=float)
+    parser.add_argument("--gamma", help="decay rate for the learning rate scheduler", default=0.9, type=float)
+    parser.add_argument("--stop_decay", help="epoch to stop LR decay at", default=40, type=float)
+    parser.add_argument("--early_stop_thresh", help="amount of epochs in a row with higher loss to stop early", default=6, type=float)
+    args = parser.parse_args()
+    artifact_path_name_4 = "New_lr0.1_m0.5_g0.9_e50_sd40_es6_ia"
+    pycm_avg_4 = (
+        run_main_x_times(x=10, artifact_path_name=artifact_path_name_4, X_train_set="X_ia.npy", Y_train_set="Y_ia.npy",
+                         lr_decay=True, base=False, args=args))
